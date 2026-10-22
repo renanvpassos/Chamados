@@ -343,8 +343,8 @@ else:
                     return len(todos_chamados)
                 return sum(1 for x in todos_chamados if x.get("status") == nome_status)
 
-            # Dividindo a tela wide: Status (esquerda) e Criticidade empurrada para a extrema direita
-            col_status_section, col_espaco, col_crit_section = st.columns([5, 1, 4])
+            # Colunas com espaçamento ajustado ([4, 2, 4]) para afastar bem os dois blocos
+            col_status_section, col_espaco, col_crit_section = st.columns([4, 2, 4])
 
             with col_status_section:
                 st.markdown('<p class="filter-label">Filtrar por Status:</p>', unsafe_allow_html=True)
@@ -387,8 +387,7 @@ else:
             with col_crit_section:
                 st.markdown('<p class="filter-label" style="text-align: right;">Filtrar por Criticidade:</p>', unsafe_allow_html=True)
                 
-                # Criamos um subconjunto de colunas alinhadas à direita dentro da própria coluna de criticidade
-                _, sub_c1, sub_c2, sub_c3 = st.columns([0.1, 1, 1, 1])
+                sub_c1, sub_c2, sub_c3 = st.columns(3)
 
                 with sub_c1:
                     if st.button(f"📋 Todas ({qtd_total_status})", key="crit_btn_todos", use_container_width=True, type="primary" if st.session_state.crit_filter == "Todos" else "secondary"):

@@ -41,18 +41,6 @@ st.markdown(
         margin-bottom: 2px;
     }
 
-    /* Alinhamento forçado para a extrema direita na coluna de criticidade */
-    .right-aligned-filter {
-        display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-        width: 100%;
-    }
-    .right-aligned-filter div.stHorizontalBlock {
-        justify-content: flex-end !important;
-        width: 100% !important;
-    }
-
     /* ===== CARD DO CHAMADO: FECHADO ===== */
     [class*="st-key-chamado_"] {
         margin-bottom: var(--espaco-fechado) !important;
@@ -355,31 +343,31 @@ else:
                     return len(todos_chamados)
                 return sum(1 for x in todos_chamados if x.get("status") == nome_status)
 
-            # Coluna da esquerda (Status) e Coluna da extrema direita (Criticidade)
-            col_status_section, col_crit_section = st.columns([1, 1])
+            # Colunas com espaçamento ajustado ([4, 2, 4]) para afastar bem os dois blocos
+            col_status_section, col_espaco, col_crit_section = st.columns([4, 2, 4])
 
             with col_status_section:
                 st.markdown('<p class="filter-label">Filtrar por Status:</p>', unsafe_allow_html=True)
                 col_todos, col_aberto, col_dev, col_andamento, col_fin = st.columns(5)
 
                 with col_todos:
-                    if st.button(f"🌐 Todos ({contar_status('Todos')})", type="primary" if st.session_state.status_filter == "Todos" else "secondary"):
+                    if st.button(f"🌐 Todos ({contar_status('Todos')})", use_container_width=True, type="primary" if st.session_state.status_filter == "Todos" else "secondary"):
                         st.session_state.status_filter = "Todos"
                         st.rerun()
                 with col_aberto:
-                    if st.button(f"🟡 Em Aberto ({contar_status('Em Aberto')})", type="primary" if st.session_state.status_filter == "Em Aberto" else "secondary"):
+                    if st.button(f"🟡 Em Aberto ({contar_status('Em Aberto')})", use_container_width=True, type="primary" if st.session_state.status_filter == "Em Aberto" else "secondary"):
                         st.session_state.status_filter = "Em Aberto"
                         st.rerun()
                 with col_dev:
-                    if st.button(f"🔵 Desenvolv. ({contar_status('Enviado ao Desenvolvimento')})", type="primary" if st.session_state.status_filter == "Enviado ao Desenvolvimento" else "secondary"):
+                    if st.button(f"🔵 Desenvolv. ({contar_status('Enviado ao Desenvolvimento')})", use_container_width=True, type="primary" if st.session_state.status_filter == "Enviado ao Desenvolvimento" else "secondary"):
                         st.session_state.status_filter = "Enviado ao Desenvolvimento"
                         st.rerun()
                 with col_andamento:
-                    if st.button(f"🟣 Andamento ({contar_status('Em Andamento')})", type="primary" if st.session_state.status_filter == "Em Andamento" else "secondary"):
+                    if st.button(f"🟣 Andamento ({contar_status('Em Andamento')})", use_container_width=True, type="primary" if st.session_state.status_filter == "Em Andamento" else "secondary"):
                         st.session_state.status_filter = "Em Andamento"
                         st.rerun()
                 with col_fin:
-                    if st.button(f"🟢 Finalizado ({contar_status('Finalizado')})", type="primary" if st.session_state.status_filter == "Finalizado" else "secondary"):
+                    if st.button(f"🟢 Finalizado ({contar_status('Finalizado')})", use_container_width=True, type="primary" if st.session_state.status_filter == "Finalizado" else "secondary"):
                         st.session_state.status_filter = "Finalizado"
                         st.rerun()
 
@@ -391,38 +379,28 @@ else:
             else:
                 chamados_status = [x for x in todos_chamados if x.get("status") == status_filter]
 
-            # --- SUBMENU DE CRITICIDADE (Empurrado 100% para a extrema direita) ---
+            # --- SUBMENU DE CRITICIDADE (Alinhado à extrema direita) ---
             qtd_total_status = len(chamados_status)
             qtd_critico = sum(1 for x in chamados_status if x.get("criticidade") == "Crítico")
             qtd_urgente = sum(1 for x in chamados_status if x.get("criticidade") == "Urgente")
 
             with col_crit_section:
-                st.markdown(
-                    f"""
-                    <div class="right-aligned-filter">
-                        <p class="filter-label">Filtrar por Criticidade:</p>
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
+                st.markdown('<p class="filter-label" style="text-align: right;">Filtrar por Criticidade:</p>', unsafe_allow_html=True)
                 
-                with st.container():
-                    st.markdown('<div class="right-aligned-filter">', unsafe_allow_html=True)
-                    sub_c1, sub_c2, sub_c3 = st.columns(3)
+                sub_c1, sub_c2, sub_c3 = st.columns(3)
 
-                    with sub_c1:
-                        if st.button(f"📋 Todas ({qtd_total_status})", key="crit_btn_todos", type="primary" if st.session_state.crit_filter == "Todos" else "secondary"):
-                            st.session_state.crit_filter = "Todos"
-                            st.rerun()
-                    with sub_c2:
-                        if st.button(f"💣 Crítico ({qtd_critico})", key="crit_btn_critico", type="primary" if st.session_state.crit_filter == "Crítico" else "secondary"):
-                            st.session_state.crit_filter = "Crítico"
-                            st.rerun()
-                    with sub_c3:
-                        if st.button(f"❗ Urgente ({qtd_urgente})", key="crit_btn_urgente", type="primary" if st.session_state.crit_filter == "Urgente" else "secondary"):
-                            st.session_state.crit_filter = "Urgente"
-                            st.rerun()
-                    st.markdown('</div>', unsafe_allow_html=True)
+                with sub_c1:
+                    if st.button(f"📋 Todas ({qtd_total_status})", key="crit_btn_todos", use_container_width=True, type="primary" if st.session_state.crit_filter == "Todos" else "secondary"):
+                        st.session_state.crit_filter = "Todos"
+                        st.rerun()
+                with sub_c2:
+                    if st.button(f"💣 Crítico ({qtd_critico})", key="crit_btn_critico", use_container_width=True, type="primary" if st.session_state.crit_filter == "Crítico" else "secondary"):
+                        st.session_state.crit_filter = "Crítico"
+                        st.rerun()
+                with sub_c3:
+                    if st.button(f"❗ Urgente ({qtd_urgente})", key="crit_btn_urgente", use_container_width=True, type="primary" if st.session_state.crit_filter == "Urgente" else "secondary"):
+                        st.session_state.crit_filter = "Urgente"
+                        st.rerun()
 
             crit_filter = st.session_state.crit_filter
 

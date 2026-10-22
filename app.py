@@ -448,7 +448,7 @@ else:
         st.markdown("---")
         st.subheader("⚙️ Painel do Administrador")
 
-        termo_busca = st.text_input("🔍 Buscar por qualquer detalhe (Título, Solicitante, Importador, ID, Responsável, Descrição...):", placeholder="Digite para filtrar os chamados instantaneamente...")
+        termo_busca = st.text_input("🔍 Buscar por qualquer detalhe (Título, Solicitante, Importador, Responsável, Descrição...):", placeholder="Digite para filtrar os chamados instantaneamente...")
 
         try:
             response = (

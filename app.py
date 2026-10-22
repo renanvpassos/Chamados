@@ -7,6 +7,8 @@ import ssl
 import html
 from email.message import EmailMessage
 from streamlit_quill import st_quill
+import re
+import base64
 
 # --- ESTADO DE AUTENTICAÇÃO E LOGS (Necessário antes do set_page_config) ---
 if "admin_logged_in" not in st.session_state:
@@ -358,6 +360,58 @@ def formatar_data_br(data_str):
     except Exception:
         return data_str
 
+def processar_imagens_base64_quill(html_content):
+    """
+    Varre o HTML do Quill, extrai imagens em Base64 (coladas pelo usuário),
+    faz o upload para o Supabase Storage e substitui pelo link público.
+    """
+    if not html_content:
+        return html_content
+        
+    bucket_name = "chamados-anexos"
+    
+    # Regex para encontrar tags <img ... src="data:image/EXT;base64,DADOS" ...>
+    padrao_img = re.compile(r'<img[^>]+src=["\']data:image/([^;]+);base64,([^"\']+)["\'][^>]*>')
+    
+    def substituir_imagem(match):
+        ext = match.group(1).lower()
+        if ext == 'jpeg':
+            ext = 'jpg'
+        b64_data = match.group(2)
+        
+        try:
+            # Decodifica a string base64 para bytes
+            file_bytes = base64.b64decode(b64_data)
+            
+            # Gera um caminho único no Storage
+            file_path = f"anexos/quill_{uuid.uuid4()}.{ext}"
+            
+            # Faz o upload para o bucket do Supabase
+            supabase.storage.from_(bucket_name).upload(
+                file_path,
+                file_bytes,
+                file_options={"content-type": f"image/{ext}"}
+            )
+            
+            # Obtém a URL pública da imagem salva
+            public_url_res = supabase.storage.from_(bucket_name).get_public_url(file_path)
+            if isinstance(public_url_res, dict):
+                public_url = public_url_res.get("publicUrl") or public_url_res.get("public_url") or public_url_res.get("signedURL", "")
+            else:
+                public_url = str(public_url_res)
+                
+            # Substitui o base64 gigante pela URL pública na tag HTML original
+            tag_original = match.group(0)
+            tag_nova = tag_original.replace(f"data:image/{match.group(1)};base64,{b64_data}", public_url)
+            return tag_nova
+        except Exception as e:
+            print(f"Erro ao processar imagem colada no editor: {e}")
+            return match.group(0) # Retorna a tag original se ocorrer algum erro
+            
+    # Executa a substituição para todas as imagens encontradas no texto rico
+    html_processado = padrao_img.sub(substituir_imagem, html_content)
+    return html_processado
+
 # --- MENU LATERAL (SE ADMIN LOGADO) ---
 pagina_selecionada = "Painel de Administrador"
 
@@ -406,9 +460,14 @@ if not st.session_state.admin_logged_in:
             st.error("Por favor, preencha todos os campos obrigatórios (*).")
         else:
             try:
+                # 1. Processa e salva fisicamente no Storage as imagens coladas no Quill
+                with st.spinner("Processando imagens do texto..."):
+                    resumo_processado = processar_imagens_base64_quill(resumo)
+
+                # 2. Faz o upload dos arquivos adicionais (file_uploader tradicional, se houver)
                 urls_imagens = []
                 if imagens:
-                    with st.spinner("Enviando imagens..."):
+                    with st.spinner("Enviando anexos complementares..."):
                         urls_imagens = upload_images(imagens)
 
                 dados_chamado = {
@@ -416,7 +475,7 @@ if not st.session_state.admin_logged_in:
                     "email": email,
                     "titulo": titulo,
                     "importador": importador,
-                    "resumo": resumo,
+                    "resumo": resumo_processado, # Salva o HTML com os links limpos do Storage
                     "imagens": urls_imagens,
                     "status": "Em Aberto",
                     "responsavel": "Não atribuído",

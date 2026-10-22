@@ -584,7 +584,6 @@ else:
                         """,
                         unsafe_allow_html=True
                     )     
-                    st.info(c['resumo'])
 
                     imgs = c.get("imagens", [])
                     if imgs:

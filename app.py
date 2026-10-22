@@ -373,7 +373,7 @@ if st.session_state.admin_logged_in:
         st.rerun()
 
 # --- INTERFACE PRINCIPAL ---
-st.title("🛠️ Suporte ao Sistema")
+st.title("Suporte de Chamados")
 
 if not st.session_state.admin_logged_in:
     st.subheader("Abrir Novo Chamado")

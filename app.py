@@ -109,7 +109,6 @@ st.markdown(
         align-items: center !important;
     }
 
-    /* Ajuste para o conteúdo interno do summary se alinhar corretamente em flex */
     [class*="st-key-chamado_"] > div > [data-testid="stExpander"] > details > summary > p {
         width: 100% !important;
         margin-bottom: 0 !important;
@@ -556,8 +555,8 @@ else:
                 # --- CÁLCULO DO TEMPO DESDE A ÚLTIMA ATUALIZAÇÃO ---
                 tempo_decorrido = calcular_tempo_ultima_atualizacao(c)
 
-                # --- TÍTULO DO EXPANDER UTILIZANDO SPAN COM FLOAT/FLEX À DIREITA ---
-                titulo_expander = f"{c['status'].upper()} - {c['titulo']} (Por: {c['nome']} | Resp: {resp_atual_badge} <span style='float: right; margin-right: 2.5rem; font-weight: 500; opacity: 0.9;'>⏱️ {tempo_decorrido}</span>)"
+                # --- TÍTULO DO EXPANDER CORRIGIDO ---
+                titulo_expander = f"{c['status'].upper()} - {c['titulo']} (Por: {c['nome']} | Resp: {resp_atual_badge}) <span style='float: right; margin-right: 2.5rem; font-weight: 500; opacity: 0.9;'>⏱️ {tempo_decorrido}</span>"
             
                 with st.container(key=f"chamado_{classe_css}_{tag_crit}_{c['id']}"), \
                      st.expander(titulo_expander):

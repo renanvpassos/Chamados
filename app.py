@@ -157,9 +157,9 @@ def tag_criticidade(criticidade):
 
 def badge_criticidade(criticidade):
     if criticidade == "Crítico":
-        return '<span style="background-color: #212121; color: #ffffff; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 0.85em;">💣 Crítico</span>'
+        return '<span style="background-color: #ff8585; color: #ffffff; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 0.85em;">💣 Crítico</span>'
     if criticidade == "Urgente":
-        return '<span style="background-color: #ff9800; color: #000000; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 0.85em;">❗ Urgente</span>'
+        return '<span style="background-color: #ef9a9a; color: #000000; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 0.85em;">❗ Urgente</span>'
     return '<span style="background-color: #9e9e9e; color: #ffffff; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 0.85em;">Normal</span>'
 
 # --- FUNÇÃO AUXILIAR DE CORES DOS STATUS ---

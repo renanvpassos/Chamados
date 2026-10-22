@@ -343,7 +343,7 @@ else:
                     return len(todos_chamados)
                 return sum(1 for x in todos_chamados if x.get("status") == nome_status)
 
-            # Dividindo a tela wide com espaçamento maior: Status (esquerda) e Criticidade (extrema direita)
+            # Dividindo a tela wide: Status (esquerda) e Criticidade empurrada para a extrema direita
             col_status_section, col_espaco, col_crit_section = st.columns([5, 1, 4])
 
             with col_status_section:
@@ -379,24 +379,26 @@ else:
             else:
                 chamados_status = [x for x in todos_chamados if x.get("status") == status_filter]
 
-            # --- SUBMENU DE CRITICIDADE (Canto direito do final da tela) ---
+            # --- SUBMENU DE CRITICIDADE (Alinhado à extrema direita) ---
             qtd_total_status = len(chamados_status)
             qtd_critico = sum(1 for x in chamados_status if x.get("criticidade") == "Crítico")
             qtd_urgente = sum(1 for x in chamados_status if x.get("criticidade") == "Urgente")
 
             with col_crit_section:
                 st.markdown('<p class="filter-label" style="text-align: right;">Filtrar por Criticidade:</p>', unsafe_allow_html=True)
-                col_c_todos, col_c_crit, col_c_urg = st.columns(3)
+                
+                # Criamos um subconjunto de colunas alinhadas à direita dentro da própria coluna de criticidade
+                _, sub_c1, sub_c2, sub_c3 = st.columns([0.1, 1, 1, 1])
 
-                with col_c_todos:
+                with sub_c1:
                     if st.button(f"📋 Todas ({qtd_total_status})", key="crit_btn_todos", use_container_width=True, type="primary" if st.session_state.crit_filter == "Todos" else "secondary"):
                         st.session_state.crit_filter = "Todos"
                         st.rerun()
-                with col_c_crit:
+                with sub_c2:
                     if st.button(f"💣 Crítico ({qtd_critico})", key="crit_btn_critico", use_container_width=True, type="primary" if st.session_state.crit_filter == "Crítico" else "secondary"):
                         st.session_state.crit_filter = "Crítico"
                         st.rerun()
-                with col_c_urg:
+                with sub_c3:
                     if st.button(f"❗ Urgente ({qtd_urgente})", key="crit_btn_urgente", use_container_width=True, type="primary" if st.session_state.crit_filter == "Urgente" else "secondary"):
                         st.session_state.crit_filter = "Urgente"
                         st.rerun()
@@ -413,7 +415,6 @@ else:
                 termo = termo_busca.strip().lower()
                 chamadosfiltrados = []
                 for c in chamados:
-                    # Agrupa todos os campos textuais importantes do chamado para checar o termo
                     texto_completo = f"{c.get('id', '')} {c.get('titulo', '')} {c.get('nome', '')} {c.get('email', '')} {c.get('importador', '')} {c.get('resumo', '')} {c.get('responsavel', '')} {c.get('status', '')} {c.get('criticidade', '')}".lower()
                     if termo in texto_completo:
                         chamadosfiltrados.append(c)

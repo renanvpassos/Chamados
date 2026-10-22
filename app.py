@@ -605,23 +605,22 @@ else:
                                     except Exception as e:
                                         st.error(f"Erro ao atualizar chamado: {e}")
 
-                        # --- ZONA DE PERIGO: EXCLUIR CHAMADO COM SENHA DE ADMIN ---
-                        st.markdown("---")
-                        st.markdown("⚠️ **Excluir Chamado**")
+                    # --- ZONA DE PERIGO: EXCLUIR CHAMADO COM POPOVER IDÊNTICO AO LOGIN ---
+                    st.markdown("---")
+                    with st.popover("🗑️ Excluir Chamado Definitivamente", use_container_width=True):
+                        st.markdown("⚠️ **Atenção:** Esta ação não pode ser desfeita.")
                         senha_exclusao = st.text_input(
-                            "Digite a senha de admin para confirmar exclusão:",
+                            "Senha de Administrador:",
                             type="password",
                             key=f"del_pass_{c['id']}"
                         )
-                        if st.button("🗑️ Apagar Chamado Definitivamente", key=f"btn_del_{c['id']}", type="primary"):
+                        if st.button("Confirmar Exclusão", key=f"btn_del_{c['id']}", type="primary", use_container_width=True):
                             str_senha = st.secrets.get("ADMIN_PASSWORD")
                             if senha_exclusao == str_senha:
                                 try:
                                     supabase.table("chamados").delete().eq("id", c['id']).execute()
-                                    
                                     registrar_log("DELETE", f"Chamado '{c['titulo']}' (Importador: '{importador_val}') excluído por administrador.")
-                                    
-                                    st.success(f"Chamado '{c['titulo']}' excluído com sucesso!")
+                                    st.success(f"Chamado excluído com sucesso!")
                                     st.rerun()
                                 except Exception as e:
                                     st.error(f"Erro ao excluir chamado: {e}")
@@ -637,11 +636,4 @@ else:
 st.markdown("---")
 if not st.session_state.admin_logged_in:
     with st.popover("🔒 Gestão de Chamados", use_container_width=False):
-        senha_input = st.text_input("Digite a senha do Admin", type="password", key="admin_login_password_input")
-        if st.button("Entrar", key="admin_login_submit_btn"):
-            if senha_input == st.secrets.get("ADMIN_PASSWORD"):
-                st.session_state.admin_logged_in = True
-                st.success("Login efetuado com sucesso!")
-                st.rerun()
-            else:
-                st.error("Senha incorreta!")
+        senha_input = st

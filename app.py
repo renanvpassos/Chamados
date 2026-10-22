@@ -161,10 +161,9 @@ def registrar_log(acao, detalhes):
 
 # --- ENVIO DE E-MAIL ---
 def enviar_email_novo_chamado(dados):
-    """Avisa os destinatários configurados nos secrets. Retorna (ok, erro)."""
     try:
         destinatarios = st.secrets.get("EMAIL_DESTINATARIOS", [])
-        if isinstance(destinatarios, str):  # aceita também "a@x.com, b@x.com"
+        if isinstance(destinatarios, str):
             destinatarios = [e.strip() for e in destinatarios.split(",") if e.strip()]
         destinatarios = list(destinatarios)
 
@@ -229,13 +228,12 @@ def enviar_email_novo_chamado(dados):
 
 # --- CRITICIDADE ---
 OPCOES_CRITICIDADE = ["Normal", "Urgente", "Crítico"]
-ORDEM_CRITICIDADE = {"Crítico": 0, "Urgente": 1}  # sem criticidade = 2
+ORDEM_CRITICIDADE = {"Crítico": 0, "Urgente": 1}
 
 def rank_criticidade(chamado):
     return ORDEM_CRITICIDADE.get(chamado.get("criticidade"), 2)
 
 def tag_criticidade(criticidade):
-    """Token usado na key do container (para o CSS desenhar o ícone)."""
     return {"Crítico": "crit", "Urgente": "urg"}.get(criticidade, "sem")
 
 def badge_criticidade(criticidade):
@@ -247,18 +245,15 @@ def badge_criticidade(criticidade):
 
 # --- FUNÇÃO AUXILIAR DE CORES DOS STATUS ---
 def badge_status(status):
-    """Retorna uma string HTML estilizada para cada status."""
     cores = {
-        "Em Aberto": {"bg": "#ffc042", "color": "#000000"},            # Amarelo
-        "Enviado ao Desenvolvimento": {"bg": "#2196f3", "color": "#ffffff"}, # Azul
-        "Em Andamento": {"bg": "#e427f5", "color": "#ffffff"},          # Vermelho
-        "Finalizado": {"bg": "#4caf50", "color": "#ffffff"}                # Verde
+        "Em Aberto": {"bg": "#ffc042", "color": "#000000"},
+        "Enviado ao Desenvolvimento": {"bg": "#2196f3", "color": "#ffffff"},
+        "Em Andamento": {"bg": "#e427f5", "color": "#ffffff"},
+        "Finalizado": {"bg": "#4caf50", "color": "#ffffff"}
     }
-    
     config = cores.get(status, {"bg": "#9e9e9e", "color": "#ffffff"})
     return f'<span style="background-color: {config["bg"]}; color: {config["color"]}; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 0.85em;">{status}</span>'
 
-# Função auxiliar para mapear a classe CSS do expander baseada no status
 def obter_classe_expander(status):
     mapa = {
         "Em Aberto": "aberto",
@@ -267,6 +262,53 @@ def obter_classe_expander(status):
         "Finalizado": "finalizado",
     }
     return mapa.get(status, "outro")
+
+# --- CALCULAR TEMPO DESDE A ÚLTIMA ATUALIZAÇÃO ---
+def calcular_tempo_ultima_atualizacao(chamado):
+    fuso_br = timezone(timedelta(hours=-3))
+    agora = datetime.now(fuso_br)
+    
+    # Tenta pegar a data do último item do histórico
+    historico = chamado.get("historico", [])
+    data_ref_str = None
+    if historico and isinstance(historico, list):
+        ultimo_evento = historico[-1]
+        data_ref_str = ultimo_evento.get('data_registro') or ultimo_evento.get('data_evento') or ultimo_evento.get('data')
+    
+    # Se não houver histórico, pega a data de criação do chamado
+    if not data_ref_str:
+        data_ref_str = chamado.get("created_at")
+        
+    if not data_ref_str:
+        return "Tempo Indisponível"
+
+    try:
+        if data_ref_str.endswith("Z"):
+            dt_ref = datetime.fromisoformat(data_ref_str.replace("Z", "+00:00"))
+        else:
+            dt_ref = datetime.fromisoformat(data_ref_str)
+        
+        dt_ref_local = dt_ref.astimezone(fuso_br)
+        diferenca = agora - dt_ref_local
+        
+        total_segundos = int(diferenca.total_seconds())
+        if total_segundos < 0:
+            total_segundos = 0
+            
+        dias = total_segundos // 86400
+        horas = (total_segundos % 86400) // 3600
+        minutos = (total_segundos % 3600) // 60
+        
+        partes = []
+        if dias > 0:
+            partes.append(f"{dias}d")
+        if horas > 0 or dias > 0:
+            partes.append(f"{horas}h")
+        partes.append(f"{minutos}m")
+        
+        return " ".join(partes)
+    except Exception:
+        return "N/A"
 
 # --- UPLOAD DE IMAGENS / ARQUIVOS ---
 def upload_images(files):
@@ -295,7 +337,6 @@ def upload_images(files):
         
     return urls
 
-# Função auxiliar para formatar data ISO para o padrão BR
 def formatar_data_br(data_str):
     if not data_str:
         return "N/A"
@@ -328,11 +369,7 @@ if st.session_state.admin_logged_in:
 # --- INTERFACE PRINCIPAL ---
 st.title("🛠️ Suporte ao Sistema")
 
-# Exibe o painel correspondente ao perfil
 if not st.session_state.admin_logged_in:
-    # ----------------------------------------------------
-    # TELA DO COLABORADOR (ABERTURA DE CHAMADO)
-    # ----------------------------------------------------
     st.subheader("Abrir Novo Chamado")
     st.caption("Preencha as informações abaixo para relatar seu problema.")
 
@@ -376,7 +413,6 @@ if not st.session_state.admin_logged_in:
                 supabase.table("chamados").insert(dados_chamado).execute()
                 registrar_log("CREATE", f"Novo chamado aberto por {nome} - Título: '{titulo}' | Importador: '{importador}'")
                 
-                # Disparo de e-mail (uma falha aqui NÃO impede o chamado de ser salvo)
                 with st.spinner("Notificando a equipe..."):
                     email_ok, email_erro = enviar_email_novo_chamado(dados_chamado)
                 
@@ -390,9 +426,6 @@ if not st.session_state.admin_logged_in:
                 st.error(f"Erro ao salvar chamado: {e}")
 
 else:
-    # ----------------------------------------------------
-    # SEÇÃO DE LOGS (SE ESCOLHIDO NO MENU LATERAL)
-    # ----------------------------------------------------
     if pagina_selecionada == "Acessar Log de Sistema":
         st.markdown("---")
         st.subheader("📜 Histórico de Logs (CRUD)")
@@ -405,18 +438,13 @@ else:
         else:
             st.info("Nenhum log registrado na sessão atual.")
             
-    # ----------------------------------------------------
-    # PAINEL ADMIN (GESTÃO DE CHAMADOS)
-    # ----------------------------------------------------
     else:
         st.markdown("---")
         st.subheader("⚙️ Painel do Administrador")
 
-        # Campo de busca geral por qualquer detalhe
         termo_busca = st.text_input("🔍 Buscar por qualquer detalhe (Título, Solicitante, Importador, ID, Responsável, Descrição...):", placeholder="Digite para filtrar os chamados instantaneamente...")
 
         try:
-            # Busca todos os chamados uma vez (para contadores e filtros)
             response = (
                 supabase.table("chamados")
                 .select("*")
@@ -426,13 +454,11 @@ else:
             )
             todos_chamados = response.data or []
 
-            # --- CONTADORES POR STATUS ---
             def contar_status(nome_status):
                 if nome_status == "Todos":
                     return len(todos_chamados)
                 return sum(1 for x in todos_chamados if x.get("status") == nome_status)
 
-            # Colunas com espaçamento ajustado ([4, 2, 4]) para afastar bem os dois blocos
             col_status_section, col_espaco, col_crit_section = st.columns([4, 2, 4])
 
             with col_status_section:
@@ -462,13 +488,11 @@ else:
 
             status_filter = st.session_state.status_filter
 
-            # Chamados do status selecionado (base para o submenu de criticidade)
             if status_filter == "Todos":
                 chamados_status = list(todos_chamados)
             else:
                 chamados_status = [x for x in todos_chamados if x.get("status") == status_filter]
 
-            # --- SUBMENU DE CRITICIDADE (Alinhado à extrema direita) ---
             qtd_total_status = len(chamados_status)
             qtd_critico = sum(1 for x in chamados_status if x.get("criticidade") == "Crítico")
             qtd_urgente = sum(1 for x in chamados_status if x.get("criticidade") == "Urgente")
@@ -498,7 +522,6 @@ else:
             else:
                 chamados = [x for x in chamados_status if x.get("criticidade") == crit_filter]
 
-            # Aplicação do filtro de busca por qualquer detalhe (se preenchido)
             if termo_busca.strip():
                 termo = termo_busca.strip().lower()
                 chamadosfiltrados = []
@@ -508,7 +531,6 @@ else:
                         chamadosfiltrados.append(c)
                 chamados = chamadosfiltrados
 
-            # Ordenação: Crítico -> Urgente -> Sem criticidade (sort estável mantém data desc)
             chamados = sorted(chamados, key=rank_criticidade)
 
             st.markdown("---")
@@ -523,9 +545,15 @@ else:
                 importador_val = c.get('importador', 'Não informado')
                 criticidade_atual = c.get('criticidade')
                 tag_crit = tag_criticidade(criticidade_atual)
+                
+                # --- CÁLCULO DO TEMPO DESDE A ÚLTIMA ATUALIZAÇÃO ---
+                tempo_decorrido = calcular_tempo_ultima_atualizacao(c)
+
+                # --- TÍTULO DO EXPANDER COM O TEMPO À DIREITA ---
+                titulo_expander = f"{c['status'].upper()} - {c['titulo']} (Por: {c['nome']} | Resp: {resp_atual_badge})  |  ⏱️ {tempo_decorrido}"
             
                 with st.container(key=f"chamado_{classe_css}_{tag_crit}_{c['id']}"), \
-                     st.expander(f"{c['status'].upper()} - {c['titulo']} (Por: {c['nome']} | Resp: {resp_atual_badge})"):
+                     st.expander(titulo_expander):
                     st.markdown(f"**Status Atual:** {status_html}", unsafe_allow_html=True)
                     st.markdown(f"**Criticidade:** {badge_criticidade(criticidade_atual)}", unsafe_allow_html=True)
                     st.write(f"**Solicitante:** {c['nome']} ({c['email']})")
@@ -560,7 +588,6 @@ else:
 
                     st.markdown("---")
                     
-                    # --- HISTÓRICO DE ATUALIZAÇÕES ---
                     st.write("📜 **Histórico de Atualizações**")
                     historico = c.get("historico", [])
                     if historico:
@@ -593,7 +620,6 @@ else:
                     else:
                         st.caption("Nenhuma atualização registrada ainda.")
 
-                    # --- AÇÕES DE ATUALIZAÇÃO E EXCLUSÃO PELO ADMIN ---
                     with st.expander("✏️ Atualizar Chamado"):
                         fuso_br = timezone(timedelta(hours=-3))
                         agora_local = datetime.now(fuso_br)
@@ -694,7 +720,6 @@ else:
                                     except Exception as e:
                                         st.error(f"Erro ao atualizar chamado: {e}")
 
-                    # --- ZONA DE PERIGO: EXCLUIR CHAMADO COM POPOVER IDÊNTICO AO LOGIN ---
                     st.markdown("---")
                     with st.popover("🗑️ Excluir Chamado", use_container_width=True):
                         st.markdown("⚠️ **Atenção:** O chamado será removido do app, mas continuará salvo no banco de dados.")
@@ -723,9 +748,6 @@ else:
         except Exception as e:
             st.error(f"Erro ao carregar chamados: {e}")
 
-# ----------------------------------------------------
-# RODAPÉ - ACESSO ÁREA ADMIN
-# ----------------------------------------------------
 st.markdown("---")
 if not st.session_state.admin_logged_in:
     with st.popover("🔒 Gestão de Chamados", use_container_width=False):

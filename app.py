@@ -6,6 +6,7 @@ import smtplib
 import ssl
 import html
 from email.message import EmailMessage
+from streamlit_quill import st_quill
 
 # --- ESTADO DE AUTENTICAÇÃO E LOGS (Necessário antes do set_page_config) ---
 if "admin_logged_in" not in st.session_state:
@@ -384,13 +385,21 @@ if not st.session_state.admin_logged_in:
         email = st.text_input("Seu E-mail*", placeholder="Ex: maria@multprocessing.com.br")
         titulo = st.text_input("Título do Chamado*", placeholder="Ex: Ajustar tag nota fiscal")
         importador = st.text_input("Importador*", placeholder="Ex: Nome do importador")
-        resumo = st.text_area("Resumo do Problema*", placeholder="Descreva um resumo do chamado...", height=120)
+        
+        st.markdown("**Resumo do Problema (com suporte a formatação e imagens)*:**")
+        # O st_quill retorna o conteúdo em formato HTML estruturado
+        resumo_html = st_quill(
+            placeholder="Descreva o problema, cole prints ou formate o texto aqui...",
+            key="quill_resumo_chamado"
+        )
+        
+        # O file_uploader opcional ainda pode continuar útil caso queiram enviar PDFs ou arquivos maiores
         imagens = st.file_uploader(
-            "Anexar imagens/prints da tela", 
-            type=["png", "jpg", "jpeg", "webp"], 
+            "Arquivos complementares (Opcional)", 
+            type=["png", "jpg", "jpeg", "webp", "pdf"], 
             accept_multiple_files=True
         )
-
+    
         submit_button = st.form_submit_button(label="🚀 Enviar Chamado")
 
     if submit_button:

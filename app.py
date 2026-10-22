@@ -59,6 +59,15 @@ st.markdown(
         margin-bottom: 2px;
     }
 
+    /* ===== IMAGENS DENTRO DA DESCRIÇÃO DO CHAMADO ===== */
+    .descricao-chamado img {
+        max-width: 100% !important;
+        height: auto !important;
+        border-radius: 4px;
+        margin: 6px 0;
+        display: block;
+    }
+
     /* ===== CARD DO CHAMADO: FECHADO ===== */
     [class*="st-key-chamado_"] {
         margin-bottom: var(--espaco-fechado) !important;
@@ -159,6 +168,8 @@ def init_supabase() -> Client:
 
 supabase = init_supabase()
 
+BUCKET_ANEXOS = "chamados-anexos"
+
 def registrar_log(acao, detalhes):
     """Salva o log diretamente no Supabase para persistir mesmo após atualizar a página"""
     try:
@@ -172,6 +183,28 @@ def registrar_log(acao, detalhes):
         }).execute()
     except Exception as e:
         print(f"Erro ao registrar log no Supabase: {e}")
+
+# --- UTILITÁRIOS DE HTML (resumo do Quill) ---
+def html_para_texto(conteudo_html):
+    """Converte o HTML do Quill em texto simples (para e-mail)."""
+    if not conteudo_html:
+        return ""
+    texto = str(conteudo_html)
+    texto = re.sub(r'<img\b[^>]*>', '[imagem]', texto, flags=re.IGNORECASE)
+    texto = re.sub(r'<br\s*/?>', '\n', texto, flags=re.IGNORECASE)
+    texto = re.sub(r'</(p|div|li|h[1-6])>', '\n', texto, flags=re.IGNORECASE)
+    texto = re.sub(r'<[^>]+>', '', texto)
+    texto = html.unescape(texto)
+    texto = re.sub(r'\n{3,}', '\n\n', texto)
+    return texto.strip()
+
+def resumo_esta_vazio(conteudo_html):
+    """Considera preenchido se houver texto OU pelo menos uma imagem."""
+    if not conteudo_html:
+        return True
+    if re.search(r'<img\b', str(conteudo_html), flags=re.IGNORECASE):
+        return False
+    return not html_para_texto(conteudo_html).strip()
 
 # --- ENVIO DE E-MAIL ---
 def enviar_email_novo_chamado(dados):
@@ -193,6 +226,7 @@ def enviar_email_novo_chamado(dados):
         e = lambda campo: html.escape(str(dados.get(campo, "")))
         titulo_limpo = str(dados.get("titulo", "")).replace("\r", " ").replace("\n", " ")
         qtd_anexos = len(dados.get("imagens", []))
+        resumo_texto = html_para_texto(dados.get("resumo", ""))
 
         msg = EmailMessage()
         msg["Subject"] = f"🎫 Novo chamado: {titulo_limpo}"
@@ -207,7 +241,7 @@ def enviar_email_novo_chamado(dados):
             f"Importador: {dados.get('importador')}\n"
             f"Responsável: {dados.get('responsavel')}\n"
             f"Anexos: {qtd_anexos}\n\n"
-            f"Resumo:\n{dados.get('resumo')}\n"
+            f"Resumo:\n{resumo_texto}\n"
         )
         msg.add_alternative(
             f"""
@@ -219,7 +253,7 @@ def enviar_email_novo_chamado(dados):
             <b>Anexos:</b> {qtd_anexos}</p>
             <p><b>Resumo:</b></p>
             <blockquote style="border-left:4px solid #2196f3; padding-left:10px; margin-left:0;">
-                {e('resumo').replace(chr(10), '<br>')}
+                {html.escape(resumo_texto).replace(chr(10), '<br>')}
             </blockquote>
             """,
             subtype="html",
@@ -320,9 +354,15 @@ def calcular_tempo_ultima_atualizacao(chamado):
     except Exception:
         return "N/A"
 
+# --- STORAGE ---
+def obter_url_publica(file_path):
+    public_url_res = supabase.storage.from_(BUCKET_ANEXOS).get_public_url(file_path)
+    if isinstance(public_url_res, dict):
+        return public_url_res.get("publicUrl") or public_url_res.get("public_url") or public_url_res.get("signedURL", "")
+    return str(public_url_res)
+
 def upload_files(files):
     anexos_info = []
-    bucket_name = "chamados-anexos"
     
     for file in files:
         nome_original = file.name
@@ -330,25 +370,50 @@ def upload_files(files):
         file_path = f"anexos/{uuid.uuid4()}.{ext}"
         file_bytes = file.getvalue()
         
-        supabase.storage.from_(bucket_name).upload(
+        supabase.storage.from_(BUCKET_ANEXOS).upload(
             file_path,
             file_bytes,
             file_options={"content-type": file.type if hasattr(file, 'type') else "application/octet-stream"}
         )
         
-        public_url_res = supabase.storage.from_(bucket_name).get_public_url(file_path)
-        
-        if isinstance(public_url_res, dict):
-            public_url = public_url_res.get("publicUrl") or public_url_res.get("public_url") or public_url_res.get("signedURL", "")
-        else:
-            public_url = str(public_url_res)
-            
         anexos_info.append({
             "name": nome_original,
-            "url": public_url
+            "url": obter_url_publica(file_path)
         })
         
     return anexos_info
+
+def processar_imagens_coladas(resumo_html):
+    """
+    Procura imagens embutidas (data:image/...;base64,...) no HTML do editor,
+    envia cada uma para o mesmo bucket dos anexos e substitui o src pela URL pública.
+    Retorna o HTML com as URLs já trocadas.
+    """
+    if not resumo_html or "data:image" not in resumo_html:
+        return resumo_html
+
+    padrao = re.compile(
+        r'(<img\b[^>]*?\bsrc=)(["\'])data:image/([a-zA-Z0-9.+-]+);base64,([A-Za-z0-9+/=\s]+?)\2',
+        flags=re.IGNORECASE
+    )
+    mapa_ext = {"jpeg": "jpg", "svg+xml": "svg", "x-icon": "ico"}
+
+    def substituir(match):
+        prefixo, aspas, subtipo, b64 = match.groups()
+        subtipo = subtipo.lower()
+        ext = mapa_ext.get(subtipo, subtipo)
+        file_bytes = base64.b64decode(re.sub(r'\s+', '', b64))
+        file_path = f"anexos/{uuid.uuid4()}.{ext}"
+
+        supabase.storage.from_(BUCKET_ANEXOS).upload(
+            file_path,
+            file_bytes,
+            file_options={"content-type": f"image/{subtipo}"}
+        )
+        url = obter_url_publica(file_path)
+        return f"{prefixo}{aspas}{url}{aspas}"
+
+    return padrao.sub(substituir, resumo_html)
 
 def formatar_data_br(data_str):
     if not data_str:
@@ -429,7 +494,7 @@ if not st.session_state.admin_logged_in:
         submit_button = st.form_submit_button(label="🚀 Enviar Chamado")
 
     if submit_button:
-        if not nome or not email or not titulo or not importador or not resumo:
+        if not nome or not email or not titulo or not importador or resumo_esta_vazio(resumo):
             st.error("Por favor, preencha todos os campos obrigatórios (*).")
         else:
             try:
@@ -438,12 +503,18 @@ if not st.session_state.admin_logged_in:
                     with st.spinner("A enviar arquivos..."):
                         anexos_info = upload_files(arquivos_descricao)
 
+                # Imagens coladas no editor: sobe para o bucket e troca base64 por URL pública
+                resumo_final = resumo
+                if resumo and "data:image" in resumo:
+                    with st.spinner("Processando imagens coladas..."):
+                        resumo_final = processar_imagens_coladas(resumo)
+
                 dados_chamado = {
                     "nome": nome,
                     "email": email,
                     "titulo": titulo,
                     "importador": importador,
-                    "resumo": resumo,
+                    "resumo": resumo_final,
                     "imagens": anexos_info,
                     "status": "Em Aberto",
                     "responsavel": "Não atribuído",

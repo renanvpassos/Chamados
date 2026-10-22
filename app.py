@@ -29,6 +29,11 @@ st.markdown(
         padding-right: 12px !important;
     }
 
+    /* Reduz a margem entre os cards dos chamados */
+    [data-testid="stExpander"] {
+        margin-bottom: -6px !important; /* Ajuste este valor para controlar a proximidade */
+    }
+
     /* Cores de fundo dinâmicas para os expanders conforme o status */
     .expander-aberto [data-testid="stExpander"] {
         background-color: #fffde7 !important; /* Amarelo bem claro */

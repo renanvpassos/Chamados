@@ -2,6 +2,10 @@ import streamlit as st
 from supabase import create_client, Client
 import uuid
 from datetime import datetime, timezone, timedelta
+import smtplib
+import ssl
+import html
+from email.message import EmailMessage
 
 # --- ESTADO DE AUTENTICAÇÃO E LOGS (Necessário antes do set_page_config) ---
 if "admin_logged_in" not in st.session_state:
@@ -155,6 +159,74 @@ def registrar_log(acao, detalhes):
         "detalhes": detalhes
     })
 
+# --- ENVIO DE E-MAIL ---
+def enviar_email_novo_chamado(dados):
+    """Avisa os destinatários configurados nos secrets. Retorna (ok, erro)."""
+    try:
+        destinatarios = st.secrets.get("EMAIL_DESTINATARIOS", [])
+        if isinstance(destinatarios, str):  # aceita também "a@x.com, b@x.com"
+            destinatarios = [e.strip() for e in destinatarios.split(",") if e.strip()]
+        destinatarios = list(destinatarios)
+
+        if not destinatarios:
+            return False, "Nenhum destinatário configurado em EMAIL_DESTINATARIOS."
+
+        host = st.secrets["SMTP_HOST"]
+        porta = int(st.secrets.get("SMTP_PORT", 587))
+        usuario = st.secrets["SMTP_USER"]
+        senha = st.secrets["SMTP_PASSWORD"]
+        remetente = st.secrets.get("EMAIL_REMETENTE", usuario)
+
+        e = lambda campo: html.escape(str(dados.get(campo, "")))
+        titulo_limpo = str(dados.get("titulo", "")).replace("\r", " ").replace("\n", " ")
+        qtd_imgs = len(dados.get("imagens", []))
+
+        msg = EmailMessage()
+        msg["Subject"] = f"🎫 Novo chamado: {titulo_limpo}"
+        msg["From"] = remetente
+        msg["To"] = ", ".join(destinatarios)
+        msg["Reply-To"] = str(dados.get("email", "")).replace("\r", "").replace("\n", "")
+
+        msg.set_content(
+            f"Novo chamado aberto\n\n"
+            f"Título: {dados.get('titulo')}\n"
+            f"Solicitante: {dados.get('nome')} ({dados.get('email')})\n"
+            f"Importador: {dados.get('importador')}\n"
+            f"Responsável: {dados.get('responsavel')}\n"
+            f"Anexos: {qtd_imgs}\n\n"
+            f"Resumo:\n{dados.get('resumo')}\n"
+        )
+        msg.add_alternative(
+            f"""
+            <h3>🎫 Novo chamado aberto</h3>
+            <p><b>Título:</b> {e('titulo')}<br>
+            <b>Solicitante:</b> {e('nome')} ({e('email')})<br>
+            <b>Importador:</b> {e('importador')}<br>
+            <b>Responsável:</b> {e('responsavel')}<br>
+            <b>Anexos:</b> {qtd_imgs}</p>
+            <p><b>Resumo:</b></p>
+            <blockquote style="border-left:4px solid #2196f3; padding-left:10px; margin-left:0;">
+                {e('resumo').replace(chr(10), '<br>')}
+            </blockquote>
+            """,
+            subtype="html",
+        )
+
+        contexto = ssl.create_default_context()
+        if porta == 465:
+            with smtplib.SMTP_SSL(host, porta, context=contexto, timeout=15) as server:
+                server.login(usuario, senha)
+                server.send_message(msg)
+        else:
+            with smtplib.SMTP(host, porta, timeout=15) as server:
+                server.starttls(context=contexto)
+                server.login(usuario, senha)
+                server.send_message(msg)
+
+        return True, None
+    except Exception as ex:
+        return False, str(ex)
+
 # --- CRITICIDADE ---
 OPCOES_CRITICIDADE = ["Normal", "Urgente", "Crítico"]
 ORDEM_CRITICIDADE = {"Crítico": 0, "Urgente": 1}  # sem criticidade = 2
@@ -302,6 +374,16 @@ if not st.session_state.admin_logged_in:
 
                 supabase.table("chamados").insert(dados_chamado).execute()
                 registrar_log("CREATE", f"Novo chamado aberto por {nome} - Título: '{titulo}' | Importador: '{importador}'")
+                
+                # Disparo de e-mail (uma falha aqui NÃO impede o chamado de ser salvo)
+                with st.spinner("Notificando a equipe..."):
+                    email_ok, email_erro = enviar_email_novo_chamado(dados_chamado)
+                
+                if email_ok:
+                    registrar_log("EMAIL", f"Notificação enviada para o chamado '{titulo}'")
+                else:
+                    registrar_log("EMAIL_ERRO", f"Falha ao notificar chamado '{titulo}': {email_erro}")
+                
                 st.success("✅ Chamado registrado com sucesso! Nossa equipe irá entrar em contato em breve.")
             except Exception as e:
                 st.error(f"Erro ao salvar chamado: {e}")

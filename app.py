@@ -31,7 +31,7 @@ st.markdown(
 
     /* Reduz a margem entre os cards dos chamados */
     [data-testid="stExpander"] {
-        margin-bottom: -50px !important; /* Ajuste este valor para controlar a proximidade */
+        margin-bottom: -30px !important; /* Ajuste este valor para controlar a proximidade */
     }
 
     /* Cores de fundo dinâmicas para os expanders conforme o status */

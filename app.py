@@ -10,24 +10,41 @@ st.set_page_config(
     layout="centered"
 )
 
-# --- CSS PERSONALIZADO PARA BOTÕES DINÂMICOS E COMPACTOS ---
+# --- CSS PERSONALIZADO PARA BOTÕES E EXPANDERS COLORIDOS ---
 st.markdown(
     """
     <style>
-    /* Permite que os botões ajustem a largura pelo conteúdo e fiquem mais próximos */
+    /* Permite que os botões do filtro ajustem a largura pelo conteúdo e fiquem mais próximos */
     div.stHorizontalBlock {
-        gap: 8px !important;
+        gap: 6px !important;
     }
     div.stHorizontalBlock > div {
         flex: 0 1 auto !important;
         width: auto !important;
     }
-    /* Evita corte de texto e ajusta o padding interno do botão */
     div.stButton > button {
         width: auto !important;
         white-space: nowrap !important;
-        padding-left: 14px !important;
-        padding-right: 14px !important;
+        padding-left: 12px !important;
+        padding-right: 12px !important;
+    }
+
+    /* Cores de fundo dinâmicas para os expanders conforme o status */
+    .expander-aberto [data-testid="stExpander"] {
+        background-color: #fffde7 !important; /* Amarelo bem claro */
+        border: 1px solid #ffeb3b !important;
+    }
+    .expander-dev [data-testid="stExpander"] {
+        background-color: #e3f2fd !important; /* Azul bem claro */
+        border: 1px solid #2196f3 !important;
+    }
+    .expander-andamento [data-testid="stExpander"] {
+        background-color: #ffebee !important; /* Vermelho bem claro */
+        border: 1px solid #f44336 !important;
+    }
+    .expander-finalizado [data-testid="stExpander"] {
+        background-color: #e8f5e9 !important; /* Verde bem claro */
+        border: 1px solid #4caf50 !important;
     }
     </style>
     """,
@@ -71,8 +88,20 @@ def badge_status(status):
         "Finalizado": {"bg": "#4caf50", "color": "#ffffff"}             # Verde
     }
     
-    config = cores.get(status, {"bg": "#9e9e9e", "color": "#ffffff"}) # Cinza padrão se não achar
+    config = cores.get(status, {"bg": "#9e9e9e", "color": "#ffffff"})
     return f'<span style="background-color: {config["bg"]}; color: {config["color"]}; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 0.85em;">{status}</span>'
+
+# Função auxiliar para mapear a classe CSS do expander baseada no status
+def obter_classe_expander(status):
+    if status == "Em Aberto":
+        return "expander-aberto"
+    elif status == "Enviado ao Desenvolvimento":
+        return "expander-dev"
+    elif status == "Em Andamento":
+        return "expander-andamento"
+    elif status == "Finalizado":
+        return "expander-finalizado"
+    return ""
 
 # --- UPLOAD DE IMAGENS / ARQUIVOS ---
 def upload_images(files):
@@ -244,7 +273,10 @@ else:
             for c in chamados:
                 resp_atual_badge = c.get('responsavel', 'Não atribuído')
                 status_html = badge_status(c['status'])
+                classe_css = obter_classe_expander(c['status'])
                 
+                # Envolve o expander num bloco HTML com a classe correspondente à cor do status
+                st.markdown(f'<div class="{classe_css}">', unsafe_allow_html=True)
                 with st.expander(f"{c['status'].upper()} - {c['titulo']} (Por: {c['nome']} | Resp: {resp_atual_badge})"):
                     st.markdown(f"**Status Atual:** {status_html}", unsafe_allow_html=True)
                     st.write(f"**Solicitante:** {c['nome']} ({c['email']})")
@@ -418,6 +450,7 @@ else:
                                     st.error(f"Erro ao excluir chamado: {e}")
                             else:
                                 st.error("Senha de administrador incorreta!")
+                st.markdown('</div>', unsafe_allow_html=True)
 
         except Exception as e:
             st.error(f"Erro ao carregar chamados: {e}")

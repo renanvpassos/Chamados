@@ -31,7 +31,7 @@ st.markdown(
 
     /* Aplica a aproximação suave constante no container do card (fechado ou aberto) */
     div[class*="expander-"] {
-        margin-bottom: -18px !important; /* Ajuste aqui entre -15px e -25px para o espaçamento ideal fechado */
+        margin-bottom: -50px !important; /* Ajuste aqui entre -15px e -25px para o espaçamento ideal fechado */
     }
 
     /* Garante que o elemento do Streamlit limpe as margens internas que causam grandes saltos */

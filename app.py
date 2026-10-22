@@ -10,13 +10,24 @@ st.set_page_config(
     layout="centered"
 )
 
-# --- CSS PERSONALIZADO PARA BOTÕES DINÂMICOS ---
+# --- CSS PERSONALIZADO PARA BOTÕES DINÂMICOS E COMPACTOS ---
 st.markdown(
     """
     <style>
-    /* Faz com que os botões da barra de filtro ajustem o tamanho ao texto e fiquem alinhados */
+    /* Permite que os botões ajustem a largura pelo conteúdo e fiquem mais próximos */
+    div.stHorizontalBlock {
+        gap: 8px !important;
+    }
     div.stHorizontalBlock > div {
         flex: 0 1 auto !important;
+        width: auto !important;
+    }
+    /* Evita corte de texto e ajusta o padding interno do botão */
+    div.stButton > button {
+        width: auto !important;
+        white-space: nowrap !important;
+        padding-left: 14px !important;
+        padding-right: 14px !important;
     }
     </style>
     """,
@@ -206,7 +217,7 @@ else:
                 st.session_state.status_filter = "Em Aberto"
                 st.rerun()
         with col_dev:
-            if st.button("🔵 Enviado ao Dev", type="primary" if st.session_state.status_filter == "Enviado ao Desenvolvimento" else "secondary"):
+            if st.button("🔵 Enviado ao Desenvolvimento", type="primary" if st.session_state.status_filter == "Enviado ao Desenvolvimento" else "secondary"):
                 st.session_state.status_filter = "Enviado ao Desenvolvimento"
                 st.rerun()
         with col_andamento:

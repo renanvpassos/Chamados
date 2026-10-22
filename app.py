@@ -448,8 +448,7 @@ if not st.session_state.admin_logged_in:
         
         # Carregador de imagens específico para ilustrar o problema na descrição
         imagens_descricao = st.file_uploader(
-            "Adicionar imagens à descrição (Opcional)", 
-            type=["png", "jpg", "jpeg", "webp"], 
+            "Adicionar arquivos à descrição (Opcional)", 
             accept_multiple_files=True,
             key="imagens_desc_form"
         )
@@ -770,8 +769,7 @@ else:
                                 hora_input = st.time_input("Hora da Atualização", value=agora_local.time(), key=f"time_{c['id']}")
 
                             novos_anexos = st.file_uploader(
-                                "Anexar arquivos/prints (Opcional, múltiplos)",
-                                type=["png", "jpg", "jpeg", "webp", "pdf"],
+                                "Anexar arquivos (Opcional, múltiplos)",
                                 accept_multiple_files=True,
                                 key=f"upload_{c['id']}"
                             )

@@ -175,6 +175,7 @@ if not st.session_state.admin_logged_in:
         nome = st.text_input("Seu Nome*", placeholder="Ex: Maria Silva")
         email = st.text_input("Seu E-mail*", placeholder="Ex: maria@multprocessing.com.br")
         titulo = st.text_input("Título do Chamado*", placeholder="Ex: Ajustar tag nota fiscal cliente X")
+        importador = st.text_input("Importador*", placeholder="Ex: Nome ou código do importador")
         resumo = st.text_area("Resumo do Problema*", placeholder="Descreva um resumo do chamado...", height=120)
         imagens = st.file_uploader(
             "Anexar imagens/prints da tela", 
@@ -185,7 +186,7 @@ if not st.session_state.admin_logged_in:
         submit_button = st.form_submit_button(label="🚀 Enviar Chamado")
 
     if submit_button:
-        if not nome or not email or not titulo or not resumo:
+        if not nome or not email or not titulo or not importador or not resumo:
             st.error("Por favor, preencha todos os campos obrigatórios (*).")
         else:
             try:
@@ -198,6 +199,7 @@ if not st.session_state.admin_logged_in:
                     "nome": nome,
                     "email": email,
                     "titulo": titulo,
+                    "importador": importador,
                     "resumo": resumo,
                     "imagens": urls_imagens,
                     "status": "Em Aberto",
@@ -206,7 +208,7 @@ if not st.session_state.admin_logged_in:
                 }
 
                 supabase.table("chamados").insert(dados_chamado).execute()
-                registrar_log("CREATE", f"Novo chamado aberto por {nome} - Título: '{titulo}'")
+                registrar_log("CREATE", f"Novo chamado aberto por {nome} - Título: '{titulo}' | Importador: '{importador}'")
                 st.success("✅ Chamado registrado com sucesso! Nossa equipe irá entrar em contato em breve.")
             except Exception as e:
                 st.error(f"Erro ao salvar chamado: {e}")
@@ -274,12 +276,14 @@ else:
                 resp_atual_badge = c.get('responsavel', 'Não atribuído')
                 status_html = badge_status(c['status'])
                 classe_css = obter_classe_expander(c['status'])
+                importador_val = c.get('importador', 'Não informado')
                 
                 # Envolve o expander num bloco HTML com a classe correspondente à cor do status
                 st.markdown(f'<div class="{classe_css}">', unsafe_allow_html=True)
                 with st.expander(f"{c['status'].upper()} - {c['titulo']} (Por: {c['nome']} | Resp: {resp_atual_badge})"):
                     st.markdown(f"**Status Atual:** {status_html}", unsafe_allow_html=True)
                     st.write(f"**Solicitante:** {c['nome']} ({c['email']})")
+                    st.write(f"**Importador:** {importador_val}")
                     st.write(f"**Responsável Atual:** {resp_atual_badge}")
                     data_criacao_br = formatar_data_br(c.get('created_at'))
                     st.write(f"**Data de Abertura:** {data_criacao_br}")

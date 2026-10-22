@@ -25,6 +25,9 @@ if "admin_logged_in" not in st.session_state:
 if "crud_logs" not in st.session_state:
     st.session_state.crud_logs = []
 
+if "status_filter" not in st.session_state:
+    st.session_state.status_filter = "Todos"
+
 def registrar_log(acao, detalhes):
     fuso_br = timezone(timedelta(hours=-3))
     agora_br = datetime.now(fuso_br).strftime("%d/%m/%Y %H:%M:%S")
@@ -178,11 +181,31 @@ else:
         st.markdown("---")
         st.subheader("⚙️ Painel do Administrador")
 
-        status_filter = st.radio(
-            "Filtrar por Status:",
-            options=["Todos", "Em Aberto", "Enviado ao Desenvolvimento", "Em Andamento", "Finalizado"],
-            horizontal=True
-        )
+        st.markdown("**Filtrar por Status:**")
+        col_todos, col_aberto, col_dev, col_andamento, col_fin = st.columns(5)
+
+        with col_todos:
+            if st.button("🌐 Todos", use_container_width=True, type="primary" if st.session_state.status_filter == "Todos" else "secondary"):
+                st.session_state.status_filter = "Todos"
+                st.rerun()
+        with col_aberto:
+            if st.button("🟡 Em Aberto", use_container_width=True, type="primary" if st.session_state.status_filter == "Em Aberto" else "secondary"):
+                st.session_state.status_filter = "Em Aberto"
+                st.rerun()
+        with col_dev:
+            if st.button("🔵 Enviado ao Dev", use_container_width=True, type="primary" if st.session_state.status_filter == "Enviado ao Desenvolvimento" else "secondary"):
+                st.session_state.status_filter = "Enviado ao Desenvolvimento"
+                st.rerun()
+        with col_andamento:
+            if st.button("🔴 Em Andamento", use_container_width=True, type="primary" if st.session_state.status_filter == "Em Andamento" else "secondary"):
+                st.session_state.status_filter = "Em Andamento"
+                st.rerun()
+        with col_fin:
+            if st.button("🟢 Finalizado", use_container_width=True, type="primary" if st.session_state.status_filter == "Finalizado" else "secondary"):
+                st.session_state.status_filter = "Finalizado"
+                st.rerun()
+
+        status_filter = st.session_state.status_filter
 
         try:
             query = supabase.table("chamados").select("*").order("created_at", desc=True)
@@ -198,9 +221,7 @@ else:
                 resp_atual_badge = c.get('responsavel', 'Não atribuído')
                 status_html = badge_status(c['status'])
                 
-                # Exibição do Expander com Status Colorido via HTML
                 with st.expander(f"{c['status'].upper()} - {c['titulo']} (Por: {c['nome']} | Resp: {resp_atual_badge})"):
-                    # Renderiza o status visualmente customizado dentro do expander
                     st.markdown(f"**Status Atual:** {status_html}", unsafe_allow_html=True)
                     st.write(f"**Solicitante:** {c['nome']} ({c['email']})")
                     st.write(f"**Responsável Atual:** {resp_atual_badge}")

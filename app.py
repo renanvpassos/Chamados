@@ -473,12 +473,11 @@ else:
         st.caption("Acompanhe todas as ações e alterações realizadas no sistema (salvas no banco de dados).")
         
         try:
-            # Busca os logs ordenados do mais recente para o mais antigo diretamente do Supabase
             response_logs = (
                 supabase.table("logs_sistema")
                 .select("*")
                 .order("created_at", desc=True)
-                .limit(100) # Traz os últimos 100 logs para manter a performance
+                .limit(100)
                 .execute()
             )
             logs = response_logs.data or []
@@ -491,7 +490,7 @@ else:
                 st.info("Nenhum log registrado no sistema ainda.")
         except Exception as e:
             st.error(f"Erro ao carregar logs do banco de dados: {e}")
-            st.info("💡 Certifique-se de criar a tabela 'logs_sistema' no Supabase (instruções abaixo).")
+            st.info("💡 Certifique-se de criar a tabela 'logs_sistema' no Supabase.")
             
     else:
         st.markdown("---")
@@ -575,7 +574,7 @@ else:
             if crit_filter == "Todos":
                 chamados = chamados_status
             else:
-                chamados = [x for x in chamados_status if x.get("criticidade"] == crit_filter]
+                chamados = [x for x in chamados_status if x.get("criticidade") == crit_filter]
 
             if termo_busca.strip():
                 termo = termo_busca.strip().lower()

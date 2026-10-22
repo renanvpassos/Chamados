@@ -11,12 +11,9 @@ import re
 import base64
 import os
 
-# --- ESTADO DE AUTENTICAÇÃO E LOGS (Necessário antes do set_page_config) ---
+# --- ESTADO DE AUTENTICAÇÃO (Necessário antes do set_page_config) ---
 if "admin_logged_in" not in st.session_state:
     st.session_state.admin_logged_in = False
-
-if "crud_logs" not in st.session_state:
-    st.session_state.crud_logs = []
 
 if "status_filter" not in st.session_state:
     st.session_state.status_filter = "Todos"
@@ -163,13 +160,18 @@ def init_supabase() -> Client:
 supabase = init_supabase()
 
 def registrar_log(acao, detalhes):
-    fuso_br = timezone(timedelta(hours=-3))
-    agora_br = datetime.now(fuso_br).strftime("%d/%m/%Y %H:%M:%S")
-    st.session_state.crud_logs.append({
-        "data": agora_br,
-        "acao": acao,
-        "detalhes": detalhes
-    })
+    """Salva o log diretamente no Supabase para persistir mesmo após atualizar a página"""
+    try:
+        fuso_br = timezone(timedelta(hours=-3))
+        agora_iso = datetime.now(fuso_br).isoformat()
+        
+        supabase.table("logs_sistema").insert({
+            "acao": acao,
+            "detalhes": detalhes,
+            "created_at": agora_iso
+        }).execute()
+    except Exception as e:
+        print(f"Erro ao registrar log no Supabase: {e}")
 
 # --- ENVIO DE E-MAIL ---
 def enviar_email_novo_chamado(dados):
@@ -255,7 +257,6 @@ def badge_criticidade(criticidade):
         return '<span style="background-color: #ef9a9a; color: #000000; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 0.85em;">❗ Urgente</span>'
     return '<span style="background-color: #9e9e9e; color: #000000; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 0.85em;">Normal</span>'
 
-# --- FUNÇÃO AUXILIAR DE CORES DOS STATUS ---
 def badge_status(status):
     cores = {
         "Em Aberto": {"bg": "#ffc042", "color": "#000000"},
@@ -275,7 +276,6 @@ def obter_classe_expander(status):
     }
     return mapa.get(status, "outro")
 
-# --- CALCULAR TEMPO DESDE A ÚLTIMA ATUALIZAÇÃO ---
 def calcular_tempo_ultima_atualizacao(chamado):
     fuso_br = timezone(timedelta(hours=-3))
     agora = datetime.now(fuso_br)
@@ -320,7 +320,6 @@ def calcular_tempo_ultima_atualizacao(chamado):
     except Exception:
         return "N/A"
 
-# --- UPLOAD DE ARQUIVOS (Salva URL e Nome Original) ---
 def upload_files(files):
     anexos_info = []
     bucket_name = "chamados-anexos"
@@ -365,12 +364,7 @@ def formatar_data_br(data_str):
     except Exception:
         return data_str
 
-# --- RENDERIZADOR NATIVO DE ANEXOS ---
 def renderizar_anexos(lista_anexos):
-    """
-    Renderiza os anexos utilizando componentes nativos do Streamlit para evitar
-    erros de interpretação de tags HTML cruas na tela.
-    """
     if not lista_anexos:
         return
     
@@ -476,14 +470,28 @@ else:
     if pagina_selecionada == "Acessar Log de Sistema":
         st.markdown("---")
         st.subheader("📜 Histórico de Logs (CRUD)")
-        st.caption("Acompanhe todas as ações e alterações realizadas na sessão atual.")
+        st.caption("Acompanhe todas as ações e alterações realizadas no sistema (salvas no banco de dados).")
         
-        logs = st.session_state.get("crud_logs", [])
-        if logs:
-            for log in reversed(logs):
-                st.text(f"[{log['data']}] [{log['acao']}] {log['detalhes']}")
-        else:
-            st.info("Nenhum log registrado na sessão atual.")
+        try:
+            # Busca os logs ordenados do mais recente para o mais antigo diretamente do Supabase
+            response_logs = (
+                supabase.table("logs_sistema")
+                .select("*")
+                .order("created_at", desc=True)
+                .limit(100) # Traz os últimos 100 logs para manter a performance
+                .execute()
+            )
+            logs = response_logs.data or []
+
+            if logs:
+                for log in logs:
+                    data_formatada = formatar_data_br(log.get('created_at'))
+                    st.text(f"[{data_formatada}] [{log.get('acao')}] {log.get('detalhes')}")
+            else:
+                st.info("Nenhum log registrado no sistema ainda.")
+        except Exception as e:
+            st.error(f"Erro ao carregar logs do banco de dados: {e}")
+            st.info("💡 Certifique-se de criar a tabela 'logs_sistema' no Supabase (instruções abaixo).")
             
     else:
         st.markdown("---")
@@ -567,7 +575,7 @@ else:
             if crit_filter == "Todos":
                 chamados = chamados_status
             else:
-                chamados = [x for x in chamados_status if x.get("criticidade") == crit_filter]
+                chamados = [x for x in chamados_status if x.get("criticidade"] == crit_filter]
 
             if termo_busca.strip():
                 termo = termo_busca.strip().lower()

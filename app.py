@@ -102,7 +102,7 @@ def badge_status(status):
         "Em Aberto": {"bg": "#ffeb3b", "color": "#000000"},            # Amarelo
         "Enviado ao Desenvolvimento": {"bg": "#2196f3", "color": "#ffffff"}, # Azul
         "Em Andamento": {"bg": "#f44336", "color": "#ffffff"},          # Vermelho
-        "Finalizado": {"bg": "#4caf50", "color": "#ffffff"}             # Verde
+        "Finalizado": {"bg": "#4caf50", "color": "#ffffff"}               # Verde
     }
     
     config = cores.get(status, {"bg": "#9e9e9e", "color": "#ffffff"})
@@ -442,7 +442,8 @@ else:
                                             "historico": historico_atual
                                         }).eq("id", c['id']).execute()
 
-                                        registrar_log("UPDATE", f"Chamado #{c['id']} atualizado. Resp: {novo_responsavel}, Status: {novo_status}")
+                                        # Ajustado para exibir Título e Importador em vez do ID no Log de Update
+                                        registrar_log("UPDATE", f"Chamado '{c['titulo']}' (Importador: '{importador_val}') atualizado. Resp: {novo_responsavel}, Status: {novo_status}")
                                         st.success("Chamado atualizado com sucesso!")
                                         st.rerun()
                                     except Exception as e:
@@ -461,8 +462,11 @@ else:
                             if senha_exclusao == str_senha:
                                 try:
                                     supabase.table("chamados").delete().eq("id", c['id']).execute()
-                                    registrar_log("DELETE", f"Chamado #{c['id']} ('{c['titulo']}') excluído por administrador.")
-                                    st.success(f"Chamado #{c['id']} excluído com sucesso!")
+                                    
+                                    # Ajustado para exibir Título e Importador em vez do ID no Log de Delete
+                                    registrar_log("DELETE", f"Chamado '{c['titulo']}' (Importador: '{importador_val}') excluído por administrador.")
+                                    
+                                    st.success(f"Chamado '{c['titulo']}' excluído com sucesso!")
                                     st.rerun()
                                 except Exception as e:
                                     st.error(f"Erro ao excluir chamado: {e}")

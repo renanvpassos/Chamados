@@ -368,7 +368,7 @@ if not st.session_state.admin_logged_in:
                     "resumo": resumo,
                     "imagens": urls_imagens,
                     "status": "Em Aberto",
-                    "responsavel": "Renan",
+                    "responsavel": "Não atribuído",
                     "historico": [],
                     "ativo": True
                 }

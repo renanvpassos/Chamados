@@ -7,7 +7,7 @@ from datetime import datetime, timezone, timedelta
 st.set_page_config(
     page_title="Suporte & Chamados",
     page_icon="🎫",
-    layout="centered"
+    layout="wide"
 )
 
 st.markdown(

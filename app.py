@@ -10,6 +10,19 @@ st.set_page_config(
     layout="centered"
 )
 
+# --- CSS PERSONALIZADO PARA BOTÕES DINÂMICOS ---
+st.markdown(
+    """
+    <style>
+    /* Faz com que os botões da barra de filtro ajustem o tamanho ao texto e fiquem alinhados */
+    div.stHorizontalBlock > div {
+        flex: 0 1 auto !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 # --- CONEXÃO SUPABASE ---
 def init_supabase() -> Client:
     url = st.secrets["SUPABASE_URL"]
@@ -185,23 +198,23 @@ else:
         col_todos, col_aberto, col_dev, col_andamento, col_fin = st.columns(5)
 
         with col_todos:
-            if st.button("🌐 Todos", use_container_width=True, type="primary" if st.session_state.status_filter == "Todos" else "secondary"):
+            if st.button("🌐 Todos", type="primary" if st.session_state.status_filter == "Todos" else "secondary"):
                 st.session_state.status_filter = "Todos"
                 st.rerun()
         with col_aberto:
-            if st.button("🟡 Em Aberto", use_container_width=True, type="primary" if st.session_state.status_filter == "Em Aberto" else "secondary"):
+            if st.button("🟡 Em Aberto", type="primary" if st.session_state.status_filter == "Em Aberto" else "secondary"):
                 st.session_state.status_filter = "Em Aberto"
                 st.rerun()
         with col_dev:
-            if st.button("🔵 Enviado ao Dev", use_container_width=True, type="primary" if st.session_state.status_filter == "Enviado ao Desenvolvimento" else "secondary"):
+            if st.button("🔵 Enviado ao Dev", type="primary" if st.session_state.status_filter == "Enviado ao Desenvolvimento" else "secondary"):
                 st.session_state.status_filter = "Enviado ao Desenvolvimento"
                 st.rerun()
         with col_andamento:
-            if st.button("🔴 Em Andamento", use_container_width=True, type="primary" if st.session_state.status_filter == "Em Andamento" else "secondary"):
+            if st.button("🔴 Em Andamento", type="primary" if st.session_state.status_filter == "Em Andamento" else "secondary"):
                 st.session_state.status_filter = "Em Andamento"
                 st.rerun()
         with col_fin:
-            if st.button("🟢 Finalizado", use_container_width=True, type="primary" if st.session_state.status_filter == "Finalizado" else "secondary"):
+            if st.button("🟢 Finalizado", type="primary" if st.session_state.status_filter == "Finalizado" else "secondary"):
                 st.session_state.status_filter = "Finalizado"
                 st.rerun()
 

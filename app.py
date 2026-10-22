@@ -386,14 +386,13 @@ if not st.session_state.admin_logged_in:
         titulo = st.text_input("Título do Chamado*", placeholder="Ex: Ajustar tag nota fiscal")
         importador = st.text_input("Importador*", placeholder="Ex: Nome do importador")
         
-        st.markdown("Resumo do Problema*:")
-        # O st_quill retorna o conteúdo em formato HTML estruturado
-        resumo_html = st_quill(
+        st.markdown("**Resumo do Problema (com suporte a formatação e imagens)*:**")
+        # A variável aqui DEVE chamar-se 'resumo' para evitar o NameError na linha 406
+        resumo = st_quill(
             placeholder="Descreva o problema, cole prints ou formate o texto aqui...",
             key="quill_resumo_chamado"
         )
         
-        # O file_uploader opcional ainda pode continuar útil caso queiram enviar PDFs ou arquivos maiores
         imagens = st.file_uploader(
             "Arquivos complementares (Opcional)", 
             type=["png", "jpg", "jpeg", "webp", "pdf"], 

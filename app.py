@@ -121,7 +121,7 @@ def registrar_log(acao, detalhes):
     })
 
 # --- CRITICIDADE ---
-OPCOES_CRITICIDADE = ["Sem criticidade", "Urgente", "Crítico"]
+OPCOES_CRITICIDADE = ["Normal", "Urgente", "Crítico"]
 ORDEM_CRITICIDADE = {"Crítico": 0, "Urgente": 1}  # sem criticidade = 2
 
 def rank_criticidade(chamado):

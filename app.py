@@ -467,9 +467,9 @@ if not st.session_state.admin_logged_in:
                 st.error(f"Erro ao salvar chamado: {e}")
 
 else:
-    if pagina_selecionada == "Acessar Log de Sistema":
+    if pagina_selecionada == "Log do Sistema":
         st.markdown("---")
-        st.subheader("📜 Histórico de Logs (CRUD)")
+        st.subheader("📜 Logs")
         st.caption("Acompanhe todas as ações e alterações realizadas no sistema (salvas no banco de dados).")
         
         try:

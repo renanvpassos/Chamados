@@ -68,6 +68,15 @@ st.markdown(
         display: block;
     }
 
+    /* ===== IMAGENS DENTRO DA OBSERVAÇÃO DO HISTÓRICO ===== */
+    .observacao-historico img {
+        max-width: 100% !important;
+        height: auto !important;
+        border-radius: 4px;
+        margin: 6px 0;
+        display: block;
+    }
+
     /* ===== CARD DO CHAMADO: FECHADO ===== */
     [class*="st-key-chamado_"] {
         margin-bottom: var(--espaco-fechado) !important;
@@ -175,7 +184,7 @@ def registrar_log(acao, detalhes):
     try:
         fuso_br = timezone(timedelta(hours=-3))
         agora_iso = datetime.now(fuso_br).isoformat()
-        
+
         supabase.table("logs_sistema").insert({
             "acao": acao,
             "detalhes": detalhes,
@@ -184,9 +193,9 @@ def registrar_log(acao, detalhes):
     except Exception as e:
         print(f"Erro ao registrar log no Supabase: {e}")
 
-# --- UTILITÁRIOS DE HTML (resumo do Quill) ---
+# --- UTILITÁRIOS DE HTML (conteúdo do Quill) ---
 def html_para_texto(conteudo_html):
-    """Converte o HTML do Quill em texto simples (para e-mail)."""
+    """Converte o HTML do Quill em texto simples (para e-mail e contagem de caracteres)."""
     if not conteudo_html:
         return ""
     texto = str(conteudo_html)
@@ -205,6 +214,10 @@ def resumo_esta_vazio(conteudo_html):
     if re.search(r'<img\b', str(conteudo_html), flags=re.IGNORECASE):
         return False
     return not html_para_texto(conteudo_html).strip()
+
+def texto_sem_marcador_imagem(conteudo_html):
+    """Texto digitado, sem contar os marcadores de imagem (usado no limite de 700 caracteres)."""
+    return html_para_texto(conteudo_html).replace("[imagem]", "").strip()
 
 # --- ENVIO DE E-MAIL ---
 def enviar_email_novo_chamado(dados):
@@ -313,16 +326,16 @@ def obter_classe_expander(status):
 def calcular_tempo_ultima_atualizacao(chamado):
     fuso_br = timezone(timedelta(hours=-3))
     agora = datetime.now(fuso_br)
-    
+
     historico = chamado.get("historico", [])
     data_ref_str = None
     if historico and isinstance(historico, list):
         ultimo_evento = historico[-1]
         data_ref_str = ultimo_evento.get('data_registro') or ultimo_evento.get('data_evento') or ultimo_evento.get('data')
-    
+
     if not data_ref_str:
         data_ref_str = chamado.get("created_at")
-        
+
     if not data_ref_str:
         return "N/A"
 
@@ -331,25 +344,25 @@ def calcular_tempo_ultima_atualizacao(chamado):
             dt_ref = datetime.fromisoformat(data_ref_str.replace("Z", "+00:00"))
         else:
             dt_ref = datetime.fromisoformat(data_ref_str)
-        
+
         dt_ref_local = dt_ref.astimezone(fuso_br)
         diferenca = agora - dt_ref_local
-        
+
         total_segundos = int(diferenca.total_seconds())
         if total_segundos < 0:
             total_segundos = 0
-            
+
         dias = total_segundos // 86400
         horas = (total_segundos % 86400) // 3600
         minutos = (total_segundos % 3600) // 60
-        
+
         partes = []
         if dias > 0:
             partes.append(f"{dias}d")
         if horas > 0 or dias > 0:
             partes.append(f"{horas}h")
         partes.append(f"{minutos}m")
-        
+
         return " ".join(partes)
     except Exception:
         return "N/A"
@@ -363,34 +376,34 @@ def obter_url_publica(file_path):
 
 def upload_files(files):
     anexos_info = []
-    
+
     for file in files:
         nome_original = file.name
         ext = nome_original.split(".")[-1] if "." in nome_original else "bin"
         file_path = f"anexos/{uuid.uuid4()}.{ext}"
         file_bytes = file.getvalue()
-        
+
         supabase.storage.from_(BUCKET_ANEXOS).upload(
             file_path,
             file_bytes,
             file_options={"content-type": file.type if hasattr(file, 'type') else "application/octet-stream"}
         )
-        
+
         anexos_info.append({
             "name": nome_original,
             "url": obter_url_publica(file_path)
         })
-        
+
     return anexos_info
 
-def processar_imagens_coladas(resumo_html):
+def processar_imagens_coladas(conteudo_html):
     """
     Procura imagens embutidas (data:image/...;base64,...) no HTML do editor,
     envia cada uma para o mesmo bucket dos anexos e substitui o src pela URL pública.
     Retorna o HTML com as URLs já trocadas.
     """
-    if not resumo_html or "data:image" not in resumo_html:
-        return resumo_html
+    if not conteudo_html or "data:image" not in conteudo_html:
+        return conteudo_html
 
     padrao = re.compile(
         r'(<img\b[^>]*?\bsrc=)(["\'])data:image/([a-zA-Z0-9.+-]+);base64,([A-Za-z0-9+/=\s]+?)\2',
@@ -413,7 +426,7 @@ def processar_imagens_coladas(resumo_html):
         url = obter_url_publica(file_path)
         return f"{prefixo}{aspas}{url}{aspas}"
 
-    return padrao.sub(substituir, resumo_html)
+    return padrao.sub(substituir, conteudo_html)
 
 def formatar_data_br(data_str):
     if not data_str:
@@ -432,9 +445,9 @@ def formatar_data_br(data_str):
 def renderizar_anexos(lista_anexos):
     if not lista_anexos:
         return
-    
+
     EXTENSOES_IMAGEM = {'png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp'}
-    
+
     for item in lista_anexos:
         if isinstance(item, dict):
             url = item.get("url") or item.get("publicUrl") or item.get("public_url") or item.get("signedURL", "")
@@ -451,6 +464,18 @@ def renderizar_anexos(lista_anexos):
             else:
                 st.markdown(f"📄 [{nome}]({url})", unsafe_allow_html=False)
 
+def renderizar_observacao(observacao, data_evento_br):
+    """Renderiza a observação do histórico. Aceita HTML (novas) e texto puro (antigas)."""
+    obs = observacao or ""
+    if re.search(r'<(p|br|img|div|strong|em|u|ul|ol|li|h[1-6]|span|a)\b', obs, flags=re.IGNORECASE):
+        corpo = obs
+    else:
+        corpo = html.escape(obs).replace("\n", "<br>")
+    st.markdown(
+        f'<div class="observacao-historico" style="border-left: 4px solid #9e9e9e; padding: 4px 0 4px 12px; margin: 4px 0 8px 0;"><b>[{data_evento_br}]</b> {corpo}</div>',
+        unsafe_allow_html=True
+    )
+
 # --- MENU LATERAL (SE ADMIN LOGADO) ---
 pagina_selecionada = "Painel Chamados"
 
@@ -460,7 +485,7 @@ if st.session_state.admin_logged_in:
         "Navegação:",
         ["Painel Chamados", "Log do Sistema"]
     )
-    
+
     st.sidebar.markdown("---")
     if st.sidebar.button("🚪 Sair do Admin", use_container_width=True):
         st.session_state.admin_logged_in = False
@@ -478,20 +503,20 @@ if not st.session_state.admin_logged_in:
         email = st.text_input("Seu E-mail*", placeholder="Ex: maria@multprocessing.com.br")
         titulo = st.text_input("Título do Chamado*", placeholder="Ex: Ajustar tag nota fiscal")
         importador = st.text_input("Importador*", placeholder="Ex: Nome do importador")
-        
+
         st.markdown("**Resumo do Problema*:**")
         resumo = st_quill(
-            placeholder="Descreva o problema detalhadamente...",
+            placeholder="Descreva o problema detalhadamente... (você pode colar imagens)",
             html=True,
             key="quill_resumo_chamado"
         )
-        
+
         arquivos_descricao = st.file_uploader(
-            "Adicionar arquivos/anexos à descrição (Opcional)", 
+            "Adicionar arquivos/anexos à descrição (Opcional)",
             accept_multiple_files=True,
             key="imagens_desc_form"
         )
-    
+
         submit_button = st.form_submit_button(label="🚀 Enviar Chamado")
 
     if submit_button:
@@ -525,15 +550,15 @@ if not st.session_state.admin_logged_in:
 
                 supabase.table("chamados").insert(dados_chamado).execute()
                 registrar_log("CREATE", f"Novo chamado aberto por {nome} - Título: '{titulo}' | Importador: '{importador}'")
-                
+
                 with st.spinner("Notificando a equipe..."):
                     email_ok, email_erro = enviar_email_novo_chamado(dados_chamado)
-                
+
                 if email_ok:
                     registrar_log("EMAIL", f"Notificação enviada para o chamado '{titulo}'")
                 else:
                     registrar_log("EMAIL_ERRO", f"Falha ao notificar chamado '{titulo}': {email_erro}")
-                
+
                 st.success("✅ Chamado registrado com sucesso! Nossa equipe irá entrar em contato em breve.")
             except Exception as e:
                 st.error(f"Erro ao salvar chamado: {e}")
@@ -543,7 +568,7 @@ else:
         st.markdown("---")
         st.subheader("📜 Logs")
         st.caption("Acompanhe todas as ações e alterações realizadas no sistema (salvas no banco de dados).")
-        
+
         try:
             response_logs = (
                 supabase.table("logs_sistema")
@@ -563,7 +588,7 @@ else:
         except Exception as e:
             st.error(f"Erro ao carregar logs do banco de dados: {e}")
             st.info("💡 Certifique-se de criar a tabela 'logs_sistema' no Supabase.")
-            
+
     else:
         st.markdown("---")
         st.subheader("⚙️ Painel do Administrador")
@@ -625,7 +650,7 @@ else:
 
             with col_crit_section:
                 st.markdown('<p class="filter-label" style="text-align: left;">Filtrar por Criticidade:</p>', unsafe_allow_html=True)
-                
+
                 sub_c1, sub_c2, sub_c3 = st.columns(3)
 
                 with sub_c1:
@@ -652,7 +677,7 @@ else:
                 termo = termo_busca.strip().lower()
                 chamadosfiltrados = []
                 for c in chamados:
-                    texto_completo = f"{c.get('id', '')} {c.get('titulo', '')} {c.get('nome', '')} {c.get('email', '')} {c.get('importador', '')} {c.get('resumo', '')} {c.get('responsavel', '')} {c.get('status', '')} {c.get('criticidade', '')}".lower()
+                    texto_completo = f"{c.get('id', '')} {c.get('titulo', '')} {c.get('nome', '')} {c.get('email', '')} {c.get('importador', '')} {html_para_texto(c.get('resumo', ''))} {c.get('responsavel', '')} {c.get('status', '')} {c.get('criticidade', '')}".lower()
                     if termo in texto_completo:
                         chamadosfiltrados.append(c)
                 chamados = chamadosfiltrados
@@ -671,11 +696,11 @@ else:
                 importador_val = c.get('importador', 'Não informado')
                 criticidade_atual = c.get('criticidade')
                 tag_crit = tag_criticidade(criticidade_atual)
-                
+
                 tempo_decorrido = calcular_tempo_ultima_atualizacao(c)
 
                 titulo_expander = f"{c['status'].upper()} - {c['titulo']} (Por: {c['nome']} | Resp: {resp_atual_badge})          ⏱️ {tempo_decorrido}"
-            
+
                 with st.container(key=f"chamado_{classe_css}_{tag_crit}_{c['id']}"), \
                      st.expander(titulo_expander):
                     st.markdown(f"**Status Atual:** {status_html}", unsafe_allow_html=True)
@@ -687,11 +712,12 @@ else:
                     st.write(f"**Data de Abertura:** {data_criacao_br}")
                     st.write(f"**Descrição:**")
 
+                    # Montado em uma única linha para o Markdown não tratar o HTML como bloco de código
                     resumo_card = c.get('resumo') or ''
                     st.markdown(
                         f'<div class="descricao-chamado" style="background-color: #f8f9fa; border: 1px solid #e9ecef; padding: 12px; border-radius: 6px; color: #31333F;">{resumo_card}</div>',
                         unsafe_allow_html=True
-                    ) 
+                    )
 
                     imgs = c.get("imagens", [])
                     if imgs:
@@ -699,7 +725,7 @@ else:
                         renderizar_anexos(imgs)
 
                     st.markdown("---")
-                    
+
                     st.write("📜 **Histórico de Atualizações**")
                     historico = c.get("historico", [])
                     if historico:
@@ -710,10 +736,10 @@ else:
                             status_hist_html = badge_status(h.get('status'))
                             crit_hist = h.get('criticidade')
                             crit_hist_txt = f" | **Criticidade:** {badge_criticidade(crit_hist)}" if crit_hist else ""
-                            
+
                             st.markdown(f"🔹 **Registrado em:** {data_registro_br} | **Responsável:** `{responsavel_update}` | **Status:** {status_hist_html}{crit_hist_txt}", unsafe_allow_html=True)
-                            st.markdown(f"> **[{data_evento_br}]** {h.get('observacao')}")
-                            
+                            renderizar_observacao(h.get('observacao'), data_evento_br)
+
                             anexos_hist = h.get("anexos", [])
                             if anexos_hist:
                                 st.caption("Anexos desta atualização:")
@@ -725,6 +751,11 @@ else:
                     with st.expander("✏️ Atualizar Chamado"):
                         fuso_br = timezone(timedelta(hours=-3))
                         agora_local = datetime.now(fuso_br)
+
+                        # Versão do editor: ao incrementar, o Quill é recriado vazio após salvar
+                        chave_ver = f"quill_obs_ver_{c['id']}"
+                        if chave_ver not in st.session_state:
+                            st.session_state[chave_ver] = 0
 
                         with st.form(key=f"form_update_{c['id']}"):
                             responsaveis_list = ["Renan", "Brunno"]
@@ -754,14 +785,14 @@ else:
                                 index=idx_crit,
                                 key=f"crit_{c['id']}"
                             )
-                            
-                            observacao = st.text_area(
-                                "Observação (Máx. 700 caracteres)*", 
-                                max_chars=700,
-                                placeholder="Descreva o que foi feito ou o motivo da alteração...",
-                                key=f"obs_{c['id']}"
+
+                            st.markdown("**Observação (Máx. 700 caracteres de texto)\\*:**")
+                            observacao = st_quill(
+                                placeholder="Descreva o que foi feito ou o motivo da alteração... (você pode colar imagens)",
+                                html=True,
+                                key=f"quill_obs_{c['id']}_{st.session_state[chave_ver]}"
                             )
-                            
+
                             col_dt1, col_dt2 = st.columns(2)
                             with col_dt1:
                                 data_input = st.date_input("Data da Atualização", value=agora_local.date(), key=f"date_{c['id']}")
@@ -777,14 +808,23 @@ else:
                             btn_submit_update = st.form_submit_button("💾 Salvar Atualização")
 
                             if btn_submit_update:
-                                if not observacao.strip():
+                                qtd_chars = len(texto_sem_marcador_imagem(observacao))
+                                if resumo_esta_vazio(observacao):
                                     st.warning("Por favor, preencha a observação.")
+                                elif qtd_chars > 700:
+                                    st.warning(f"A observação tem {qtd_chars} caracteres de texto. O máximo é 700.")
                                 else:
                                     try:
                                         anexos_novos_info = []
                                         if novos_anexos:
                                             with st.spinner("Enviando anexos..."):
                                                 anexos_novos_info = upload_files(novos_anexos)
+
+                                        # Imagens coladas na observação: sobe para o bucket e troca base64 por URL
+                                        observacao_final = observacao
+                                        if observacao and "data:image" in observacao:
+                                            with st.spinner("Processando imagens coladas..."):
+                                                observacao_final = processar_imagens_coladas(observacao)
 
                                         data_registro_iso = datetime.now(fuso_br).isoformat()
                                         data_hora_combinada = datetime.combine(data_input, hora_input).replace(tzinfo=fuso_br)
@@ -794,9 +834,9 @@ else:
 
                                         novo_registro = {
                                             "status": novo_status,
-                                            "responsavel": novo_responsavel, 
+                                            "responsavel": novo_responsavel,
                                             "criticidade": criticidade_salvar,
-                                            "observacao": observacao,
+                                            "observacao": observacao_final,
                                             "data_registro": data_registro_iso,
                                             "data_evento": data_evento_iso,
                                             "anexos": anexos_novos_info
@@ -805,7 +845,7 @@ else:
                                         historico_atual = c.get("historico", [])
                                         if not isinstance(historico_atual, list):
                                             historico_atual = []
-                                        
+
                                         historico_atual.append(novo_registro)
 
                                         supabase.table("chamados").update({
@@ -816,6 +856,7 @@ else:
                                         }).eq("id", c['id']).execute()
 
                                         registrar_log("UPDATE", f"Chamado '{c['titulo']}' (Importador: '{importador_val}') atualizado. Resp: {novo_responsavel}, Status: {novo_status}, Criticidade: {nova_criticidade}")
+                                        st.session_state[chave_ver] += 1
                                         st.success("Chamado atualizado com sucesso!")
                                         st.rerun()
                                     except Exception as e:

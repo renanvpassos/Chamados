@@ -557,7 +557,7 @@ else:
                 tempo_decorrido = calcular_tempo_ultima_atualizacao(c)
 
                 # --- TÍTULO DO EXPANDER UTILIZANDO SPAN COM FLOAT/FLEX À DIREITA ---
-                titulo_expander = f"{c['status'].upper()} - {c['titulo']} (Por: {c['nome']} | Resp: {resp_atual_badge}) <span style='float: right; margin-right: 2.5rem; font-weight: 500; opacity: 0.9;'>⏱️ {tempo_decorrido}</span>"
+                titulo_expander = f"{c['status'].upper()} - {c['titulo']} (Por: {c['nome']} | Resp: {resp_atual_badge} <span style='float: right; margin-right: 2.5rem; font-weight: 500; opacity: 0.9;'>⏱️ {tempo_decorrido}</span>)"
             
                 with st.container(key=f"chamado_{classe_css}_{tag_crit}_{c['id']}"), \
                      st.expander(titulo_expander):

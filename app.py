@@ -576,6 +576,14 @@ else:
                     data_criacao_br = formatar_data_br(c.get('created_at'))
                     st.write(f"**Data de Abertura:** {data_criacao_br}")
                     st.write(f"**Descrição:**")
+                    st.markdown(
+                        f"""
+                        <div style="background-color: #f8f9fa; border: 1px solid #e9ecef; padding: 12px; border-radius: 6px; color: #31333F;">
+                            {c['resumo']}
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )     
                     st.info(c['resumo'])
 
                     imgs = c.get("imagens", [])

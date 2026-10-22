@@ -482,6 +482,7 @@ if not st.session_state.admin_logged_in:
         st.markdown("**Resumo do Problema*:**")
         resumo = st_quill(
             placeholder="Descreva o problema detalhadamente...",
+            html=True,
             key="quill_resumo_chamado"
         )
         
@@ -685,15 +686,12 @@ else:
                     data_criacao_br = formatar_data_br(c.get('created_at'))
                     st.write(f"**Data de Abertura:** {data_criacao_br}")
                     st.write(f"**Descrição:**")
-                    
+
+                    resumo_card = c.get('resumo') or ''
                     st.markdown(
-                        f"""
-                        <div class="descricao-chamado" style="background-color: #f8f9fa; border: 1px solid #e9ecef; padding: 12px; border-radius: 6px; color: #31333F;">
-                            {c['resumo']}
-                        </div>
-                        """,
+                        f'<div class="descricao-chamado" style="background-color: #f8f9fa; border: 1px solid #e9ecef; padding: 12px; border-radius: 6px; color: #31333F;">{resumo_card}</div>',
                         unsafe_allow_html=True
-                    )  
+                    ) 
 
                     imgs = c.get("imagens", [])
                     if imgs:

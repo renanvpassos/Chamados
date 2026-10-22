@@ -718,4 +718,15 @@ else:
 st.markdown("---")
 if not st.session_state.admin_logged_in:
     with st.popover("🔒 Gestão de Chamados", use_container_width=False):
-        senha_input = st
+        senha_input = st.text_input(
+            "Senha de Administrador:",
+            type="password",
+            key="login_admin_pass"
+        )
+        if st.button("Entrar", key="btn_login_admin", type="primary", use_container_width=True):
+            senha_correta = st.secrets.get("ADMIN_PASSWORD")
+            if senha_correta and senha_input == senha_correta:
+                st.session_state.admin_logged_in = True
+                st.rerun()
+            else:
+                st.error("Senha de administrador incorreta!")

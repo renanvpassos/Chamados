@@ -370,6 +370,7 @@ if not st.session_state.admin_logged_in:
                     "status": "Em Aberto",
                     "responsavel": "Renan",
                     "historico": []
+                    "ativo": True
                 }
 
                 supabase.table("chamados").insert(dados_chamado).execute()
@@ -416,7 +417,13 @@ else:
 
         try:
             # Busca todos os chamados uma vez (para contadores e filtros)
-            response = supabase.table("chamados").select("*").order("created_at", desc=True).execute()
+            response = (
+                supabase.table("chamados")
+                .select("*")
+                .eq("ativo", True)
+                .order("created_at", desc=True)
+                .execute()
+            )
             todos_chamados = response.data or []
 
             # --- CONTADORES POR STATUS ---
@@ -689,8 +696,8 @@ else:
 
                     # --- ZONA DE PERIGO: EXCLUIR CHAMADO COM POPOVER IDÊNTICO AO LOGIN ---
                     st.markdown("---")
-                    with st.popover("🗑️ Excluir Chamado Definitivamente", use_container_width=True):
-                        st.markdown("⚠️ **Atenção:** Esta ação não pode ser desfeita.")
+                    with st.popover("🗑️ Excluir Chamado", use_container_width=True):
+                        st.markdown("⚠️ **Atenção:** O chamado será removido do app, mas continuará salvo no banco de dados.")
                         senha_exclusao = st.text_input(
                             "Senha de Administrador:",
                             type="password",
@@ -700,8 +707,12 @@ else:
                             str_senha = st.secrets.get("ADMIN_PASSWORD")
                             if senha_exclusao == str_senha:
                                 try:
-                                    supabase.table("chamados").delete().eq("id", c['id']).execute()
-                                    registrar_log("DELETE", f"Chamado '{c['titulo']}' (Importador: '{importador_val}') excluído por administrador.")
+                                    fuso_br = timezone(timedelta(hours=-3))
+                                    supabase.table("chamados").update({
+                                        "ativo": False,
+                                        "excluido_em": datetime.now(fuso_br).isoformat()
+                                    }).eq("id", c['id']).execute()
+                                    registrar_log("DELETE", f"Chamado '{c['titulo']}' (Importador: '{importador_val}') desativado por administrador (mantido no banco).")
                                     st.success(f"Chamado excluído com sucesso!")
                                     st.rerun()
                                 except Exception as e:

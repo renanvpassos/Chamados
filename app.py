@@ -470,7 +470,7 @@ else:
                         st.caption("Nenhuma atualização registrada ainda.")
 
                     # --- AÇÕES DE ATUALIZAÇÃO E EXCLUSÃO PELO ADMIN ---
-                    with st.expander("✏️ Atualizar ou Excluir Chamado"):
+                    with st.expander("✏️ Atualizar Chamado"):
                         fuso_br = timezone(timedelta(hours=-3))
                         agora_local = datetime.now(fuso_br)
 

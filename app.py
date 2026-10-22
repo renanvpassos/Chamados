@@ -63,6 +63,28 @@ st.markdown(
         background-color: #e8f5e9 !important;
         border: 1px solid #4caf50 !important;
     }
+
+    /* ===== ÍCONES DE CRITICIDADE (canto direito do chamado) ===== */
+    [class*="st-key-chamado_"] > div > [data-testid="stExpander"] > details > summary {
+        position: relative;
+        padding-right: 5rem !important;
+    }
+    [class*="st-key-chamado_"][class*="_crit_"] > div > [data-testid="stExpander"] > details > summary::after {
+        content: "💣";
+        position: absolute;
+        right: 2.8rem;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 1.2rem;
+    }
+    [class*="st-key-chamado_"][class*="_urg_"] > div > [data-testid="stExpander"] > details > summary::after {
+        content: "❗";
+        position: absolute;
+        right: 2.8rem;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 1.2rem;
+    }
     </style>
     """,
     unsafe_allow_html=True
@@ -86,6 +108,9 @@ if "crud_logs" not in st.session_state:
 if "status_filter" not in st.session_state:
     st.session_state.status_filter = "Todos"
 
+if "crit_filter" not in st.session_state:
+    st.session_state.crit_filter = "Todos"
+
 def registrar_log(acao, detalhes):
     fuso_br = timezone(timedelta(hours=-3))
     agora_br = datetime.now(fuso_br).strftime("%d/%m/%Y %H:%M:%S")
@@ -94,6 +119,24 @@ def registrar_log(acao, detalhes):
         "acao": acao,
         "detalhes": detalhes
     })
+
+# --- CRITICIDADE ---
+OPCOES_CRITICIDADE = ["Sem criticidade", "Urgente", "Crítico"]
+ORDEM_CRITICIDADE = {"Crítico": 0, "Urgente": 1}  # sem criticidade = 2
+
+def rank_criticidade(chamado):
+    return ORDEM_CRITICIDADE.get(chamado.get("criticidade"), 2)
+
+def tag_criticidade(criticidade):
+    """Token usado na key do container (para o CSS desenhar o ícone)."""
+    return {"Crítico": "crit", "Urgente": "urg"}.get(criticidade, "sem")
+
+def badge_criticidade(criticidade):
+    if criticidade == "Crítico":
+        return '<span style="background-color: #212121; color: #ffffff; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 0.85em;">💣 Crítico</span>'
+    if criticidade == "Urgente":
+        return '<span style="background-color: #ff9800; color: #000000; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 0.85em;">❗ Urgente</span>'
+    return '<span style="background-color: #9e9e9e; color: #ffffff; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 0.85em;">Sem criticidade</span>'
 
 # --- FUNÇÃO AUXILIAR DE CORES DOS STATUS ---
 def badge_status(status):
@@ -251,51 +294,92 @@ else:
         st.markdown("---")
         st.subheader("⚙️ Painel do Administrador")
 
-        st.markdown("**Filtrar por Status:**")
-        col_todos, col_aberto, col_dev, col_andamento, col_fin = st.columns(5)
-
-        with col_todos:
-            if st.button("🌐 Todos", type="primary" if st.session_state.status_filter == "Todos" else "secondary"):
-                st.session_state.status_filter = "Todos"
-                st.rerun()
-        with col_aberto:
-            if st.button("🟡 Em Aberto", type="primary" if st.session_state.status_filter == "Em Aberto" else "secondary"):
-                st.session_state.status_filter = "Em Aberto"
-                st.rerun()
-        with col_dev:
-            if st.button("🔵 Enviado ao Desenvolvimento", type="primary" if st.session_state.status_filter == "Enviado ao Desenvolvimento" else "secondary"):
-                st.session_state.status_filter = "Enviado ao Desenvolvimento"
-                st.rerun()
-        with col_andamento:
-            if st.button("🔴 Em Andamento", type="primary" if st.session_state.status_filter == "Em Andamento" else "secondary"):
-                st.session_state.status_filter = "Em Andamento"
-                st.rerun()
-        with col_fin:
-            if st.button("🟢 Finalizado", type="primary" if st.session_state.status_filter == "Finalizado" else "secondary"):
-                st.session_state.status_filter = "Finalizado"
-                st.rerun()
-
-        status_filter = st.session_state.status_filter
-
         try:
-            query = supabase.table("chamados").select("*").order("created_at", desc=True)
-            if status_filter != "Todos":
-                query = query.eq("status", status_filter)
-            
-            response = query.execute()
-            chamados = response.data
+            # Busca todos os chamados uma vez (para contadores e filtros)
+            response = supabase.table("chamados").select("*").order("created_at", desc=True).execute()
+            todos_chamados = response.data or []
 
-            st.info(f"Total de chamados exibidos: {len(chamados)}")
+            # --- CONTADORES POR STATUS ---
+            def contar_status(nome_status):
+                if nome_status == "Todos":
+                    return len(todos_chamados)
+                return sum(1 for x in todos_chamados if x.get("status") == nome_status)
+
+            st.markdown("**Filtrar por Status:**")
+            col_todos, col_aberto, col_dev, col_andamento, col_fin = st.columns(5)
+
+            with col_todos:
+                if st.button(f"🌐 Todos ({contar_status('Todos')})", type="primary" if st.session_state.status_filter == "Todos" else "secondary"):
+                    st.session_state.status_filter = "Todos"
+                    st.rerun()
+            with col_aberto:
+                if st.button(f"🟡 Em Aberto ({contar_status('Em Aberto')})", type="primary" if st.session_state.status_filter == "Em Aberto" else "secondary"):
+                    st.session_state.status_filter = "Em Aberto"
+                    st.rerun()
+            with col_dev:
+                if st.button(f"🔵 Enviado ao Desenvolvimento ({contar_status('Enviado ao Desenvolvimento')})", type="primary" if st.session_state.status_filter == "Enviado ao Desenvolvimento" else "secondary"):
+                    st.session_state.status_filter = "Enviado ao Desenvolvimento"
+                    st.rerun()
+            with col_andamento:
+                if st.button(f"🔴 Em Andamento ({contar_status('Em Andamento')})", type="primary" if st.session_state.status_filter == "Em Andamento" else "secondary"):
+                    st.session_state.status_filter = "Em Andamento"
+                    st.rerun()
+            with col_fin:
+                if st.button(f"🟢 Finalizado ({contar_status('Finalizado')})", type="primary" if st.session_state.status_filter == "Finalizado" else "secondary"):
+                    st.session_state.status_filter = "Finalizado"
+                    st.rerun()
+
+            status_filter = st.session_state.status_filter
+
+            # Chamados do status selecionado (base para o submenu de criticidade)
+            if status_filter == "Todos":
+                chamados_status = list(todos_chamados)
+            else:
+                chamados_status = [x for x in todos_chamados if x.get("status") == status_filter]
+
+            # --- SUBMENU DE CRITICIDADE (dentro do filtro de status) ---
+            qtd_total_status = len(chamados_status)
+            qtd_critico = sum(1 for x in chamados_status if x.get("criticidade") == "Crítico")
+            qtd_urgente = sum(1 for x in chamados_status if x.get("criticidade") == "Urgente")
+
+            st.markdown("**Filtrar por Criticidade:**")
+            col_c_todos, col_c_crit, col_c_urg = st.columns(3)
+
+            with col_c_todos:
+                if st.button(f"📋 Todas ({qtd_total_status})", key="crit_btn_todos", type="primary" if st.session_state.crit_filter == "Todos" else "secondary"):
+                    st.session_state.crit_filter = "Todos"
+                    st.rerun()
+            with col_c_crit:
+                if st.button(f"💣 Crítico ({qtd_critico})", key="crit_btn_critico", type="primary" if st.session_state.crit_filter == "Crítico" else "secondary"):
+                    st.session_state.crit_filter = "Crítico"
+                    st.rerun()
+            with col_c_urg:
+                if st.button(f"❗ Urgente ({qtd_urgente})", key="crit_btn_urgente", type="primary" if st.session_state.crit_filter == "Urgente" else "secondary"):
+                    st.session_state.crit_filter = "Urgente"
+                    st.rerun()
+
+            crit_filter = st.session_state.crit_filter
+
+            if crit_filter == "Todos":
+                chamados = chamados_status
+            else:
+                chamados = [x for x in chamados_status if x.get("criticidade") == crit_filter]
+
+            # Ordenação: Crítico -> Urgente -> Sem criticidade (sort estável mantém data desc)
+            chamados = sorted(chamados, key=rank_criticidade)
 
             for c in chamados:
                 resp_atual_badge = c.get('responsavel', 'Não atribuído')
                 status_html = badge_status(c['status'])
                 classe_css = obter_classe_expander(c['status'])
                 importador_val = c.get('importador', 'Não informado')
+                criticidade_atual = c.get('criticidade')
+                tag_crit = tag_criticidade(criticidade_atual)
             
-                with st.container(key=f"chamado_{classe_css}_{c['id']}"), \
+                with st.container(key=f"chamado_{classe_css}_{tag_crit}_{c['id']}"), \
                      st.expander(f"{c['status'].upper()} - {c['titulo']} (Por: {c['nome']} | Resp: {resp_atual_badge})"):
                     st.markdown(f"**Status Atual:** {status_html}", unsafe_allow_html=True)
+                    st.markdown(f"**Criticidade:** {badge_criticidade(criticidade_atual)}", unsafe_allow_html=True)
                     st.write(f"**Solicitante:** {c['nome']} ({c['email']})")
                     st.write(f"**Importador:** {importador_val}")
                     st.write(f"**Responsável Atual:** {resp_atual_badge}")
@@ -337,8 +421,10 @@ else:
                             data_evento_br = formatar_data_br(h.get('data_evento') or h.get('data'))
                             responsavel_update = h.get('responsavel', 'Não informado')
                             status_hist_html = badge_status(h.get('status'))
+                            crit_hist = h.get('criticidade')
+                            crit_hist_txt = f" | **Criticidade:** {badge_criticidade(crit_hist)}" if crit_hist else ""
                             
-                            st.markdown(f"🔹 **Registrado em:** {data_registro_br} | **Responsável:** `{responsavel_update}` | **Status:** {status_hist_html}", unsafe_allow_html=True)
+                            st.markdown(f"🔹 **Registrado em:** {data_registro_br} | **Responsável:** `{responsavel_update}` | **Status:** {status_hist_html}{crit_hist_txt}", unsafe_allow_html=True)
                             st.markdown(f"> **[{data_evento_br}]** {h.get('observacao')}")
                             
                             anexos_hist = h.get("anexos", [])
@@ -384,6 +470,14 @@ else:
                                 index=idx_status,
                                 key=f"status_{c['id']}"
                             )
+
+                            idx_crit = OPCOES_CRITICIDADE.index(criticidade_atual) if criticidade_atual in OPCOES_CRITICIDADE else 0
+                            nova_criticidade = st.selectbox(
+                                "Criticidade (opcional):",
+                                options=OPCOES_CRITICIDADE,
+                                index=idx_crit,
+                                key=f"crit_{c['id']}"
+                            )
                             
                             observacao = st.text_area(
                                 "Observação (Máx. 700 caracteres)*", 
@@ -421,9 +515,12 @@ else:
                                         data_hora_combinada = datetime.combine(data_input, hora_input).replace(tzinfo=fuso_br)
                                         data_evento_iso = data_hora_combinada.isoformat()
 
+                                        criticidade_salvar = None if nova_criticidade == "Sem criticidade" else nova_criticidade
+
                                         novo_registro = {
                                             "status": novo_status,
                                             "responsavel": novo_responsavel, 
+                                            "criticidade": criticidade_salvar,
                                             "observacao": observacao,
                                             "data_registro": data_registro_iso,
                                             "data_evento": data_evento_iso,
@@ -439,11 +536,11 @@ else:
                                         supabase.table("chamados").update({
                                             "status": novo_status,
                                             "responsavel": novo_responsavel,
+                                            "criticidade": criticidade_salvar,
                                             "historico": historico_atual
                                         }).eq("id", c['id']).execute()
 
-                                        # Ajustado para exibir Título e Importador em vez do ID no Log de Update
-                                        registrar_log("UPDATE", f"Chamado '{c['titulo']}' (Importador: '{importador_val}') atualizado. Resp: {novo_responsavel}, Status: {novo_status}")
+                                        registrar_log("UPDATE", f"Chamado '{c['titulo']}' (Importador: '{importador_val}') atualizado. Resp: {novo_responsavel}, Status: {novo_status}, Criticidade: {nova_criticidade}")
                                         st.success("Chamado atualizado com sucesso!")
                                         st.rerun()
                                     except Exception as e:
@@ -463,7 +560,6 @@ else:
                                 try:
                                     supabase.table("chamados").delete().eq("id", c['id']).execute()
                                     
-                                    # Ajustado para exibir Título e Importador em vez do ID no Log de Delete
                                     registrar_log("DELETE", f"Chamado '{c['titulo']}' (Importador: '{importador_val}') excluído por administrador.")
                                     
                                     st.success(f"Chamado '{c['titulo']}' excluído com sucesso!")

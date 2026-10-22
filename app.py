@@ -386,7 +386,7 @@ if not st.session_state.admin_logged_in:
         titulo = st.text_input("Título do Chamado*", placeholder="Ex: Ajustar tag nota fiscal")
         importador = st.text_input("Importador*", placeholder="Ex: Nome do importador")
         
-        st.markdown("**Resumo do Problema (com suporte a formatação e imagens)*:**")
+        st.markdown("**Resumo do Problema*:**")
         # O st_quill retorna o conteúdo em formato HTML estruturado
         resumo_html = st_quill(
             placeholder="Descreva o problema, cole prints ou formate o texto aqui...",

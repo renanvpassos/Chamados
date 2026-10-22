@@ -369,7 +369,7 @@ if not st.session_state.admin_logged_in:
                     "imagens": urls_imagens,
                     "status": "Em Aberto",
                     "responsavel": "Renan",
-                    "historico": []
+                    "historico": [],
                     "ativo": True
                 }
 

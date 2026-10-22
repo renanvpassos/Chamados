@@ -387,13 +387,13 @@ def renderizar_anexos(lista_anexos):
                 st.markdown(f"📄 [{nome}]({url})", unsafe_allow_html=False)
 
 # --- MENU LATERAL (SE ADMIN LOGADO) ---
-pagina_selecionada = "Painel de Administrador"
+pagina_selecionada = "Painel Chamados"
 
 if st.session_state.admin_logged_in:
     st.sidebar.title("🔧 Menu Admin")
     pagina_selecionada = st.sidebar.radio(
         "Navegação:",
-        ["Painel de Administrador", "Log do Sistema"]
+        ["Painel Chamados", "Log do Sistema"]
     )
     
     st.sidebar.markdown("---")

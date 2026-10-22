@@ -60,6 +60,7 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
 # --- CONEXÃO SUPABASE ---
 def init_supabase() -> Client:
     url = st.secrets["SUPABASE_URL"]

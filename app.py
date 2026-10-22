@@ -9,6 +9,7 @@ from email.message import EmailMessage
 from streamlit_quill import st_quill
 import re
 import base64
+import os
 
 # --- ESTADO DE AUTENTICAÇÃO E LOGS (Necessário antes do set_page_config) ---
 if "admin_logged_in" not in st.session_state:
@@ -189,7 +190,7 @@ def enviar_email_novo_chamado(dados):
 
         e = lambda campo: html.escape(str(dados.get(campo, "")))
         titulo_limpo = str(dados.get("titulo", "")).replace("\r", " ").replace("\n", " ")
-        qtd_imgs = len(dados.get("imagens", []))
+        qtd_anexos = len(dados.get("imagens", []))
 
         msg = EmailMessage()
         msg["Subject"] = f"🎫 Novo chamado: {titulo_limpo}"
@@ -203,7 +204,7 @@ def enviar_email_novo_chamado(dados):
             f"Solicitante: {dados.get('nome')} ({dados.get('email')})\n"
             f"Importador: {dados.get('importador')}\n"
             f"Responsável: {dados.get('responsavel')}\n"
-            f"Anexos: {qtd_imgs}\n\n"
+            f"Anexos: {qtd_anexos}\n\n"
             f"Resumo:\n{dados.get('resumo')}\n"
         )
         msg.add_alternative(
@@ -213,7 +214,7 @@ def enviar_email_novo_chamado(dados):
             <b>Solicitante:</b> {e('nome')} ({e('email')})<br>
             <b>Importador:</b> {e('importador')}<br>
             <b>Responsável:</b> {e('responsavel')}<br>
-            <b>Anexos:</b> {qtd_imgs}</p>
+            <b>Anexos:</b> {qtd_anexos}</p>
             <p><b>Resumo:</b></p>
             <blockquote style="border-left:4px solid #2196f3; padding-left:10px; margin-left:0;">
                 {e('resumo').replace(chr(10), '<br>')}
@@ -319,20 +320,21 @@ def calcular_tempo_ultima_atualizacao(chamado):
     except Exception:
         return "N/A"
 
-# --- UPLOAD DE IMAGENS / ARQUIVOS ---
-def upload_images(files):
-    urls = []
+# --- UPLOAD DE ARQUIVOS (Salva URL e Nome Original) ---
+def upload_files(files):
+    anexos_info = []
     bucket_name = "chamados-anexos"
     
     for file in files:
-        ext = file.name.split(".")[-1]
+        nome_original = file.name
+        ext = nome_original.split(".")[-1] if "." in nome_original else "bin"
         file_path = f"anexos/{uuid.uuid4()}.{ext}"
         file_bytes = file.getvalue()
         
         supabase.storage.from_(bucket_name).upload(
             file_path,
             file_bytes,
-            file_options={"content-type": file.type}
+            file_options={"content-type": file.type if hasattr(file, 'type') else "application/octet-stream"}
         )
         
         public_url_res = supabase.storage.from_(bucket_name).get_public_url(file_path)
@@ -342,9 +344,12 @@ def upload_images(files):
         else:
             public_url = str(public_url_res)
             
-        urls.append(public_url)
+        anexos_info.append({
+            "name": nome_original,
+            "url": public_url
+        })
         
-    return urls
+    return anexos_info
 
 def formatar_data_br(data_str):
     if not data_str:
@@ -360,57 +365,51 @@ def formatar_data_br(data_str):
     except Exception:
         return data_str
 
-def processar_imagens_base64_quill(html_content):
+# --- RENDERIZADOR INTELIGENTE DE ANEXOS ---
+def renderizar_anexos_html(lista_anexos):
     """
-    Varre o HTML do Quill, extrai imagens em Base64 (coladas pelo usuário),
-    faz o upload para o Supabase Storage e substitui pelo link público.
+    Verifica se o anexo é imagem ou outro tipo de arquivo.
+    - Imagens: Renderiza a miniatura clicável.
+    - Outros: Renderiza um link com o nome original do arquivo.
     """
-    if not html_content:
-        return html_content
-        
-    bucket_name = "chamados-anexos"
+    if not lista_anexos:
+        return ""
     
-    # Regex para encontrar tags <img ... src="data:image/EXT;base64,DADOS" ...>
-    padrao_img = re.compile(r'<img[^>]+src=["\']data:image/([^;]+);base64,([^"\']+)["\'][^>]*>')
+    EXTENSOES_IMAGEM = {'png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp'}
+    html_out = "<div style='margin-top: 8px; display: flex; flex-direction: column; gap: 6px;'>"
     
-    def substituir_imagem(match):
-        ext = match.group(1).lower()
-        if ext == 'jpeg':
-            ext = 'jpg'
-        b64_data = match.group(2)
-        
-        try:
-            # Decodifica a string base64 para bytes
-            file_bytes = base64.b64decode(b64_data)
+    for item in lista_anexos:
+        # Suporte retrocompatível caso seja apenas string ou dicionário antigo
+        if isinstance(item, dict):
+            url = item.get("url") or item.get("publicUrl") or item.get("public_url") or item.get("signedURL", "")
+            nome = item.get("name", "Arquivo Anexado")
+        else:
+            url = str(item)
+            # Tenta extrair o nome da URL ou define um genérico
+            nome = url.split("/")[-1].split("?")[0] if "/" in url else "Arquivo Anexado"
+
+        extensao = nome.split(".")[-1].lower() if "." in nome else ""
+
+        if extensao in EXTENSOES_IMAGEM:
+            html_out += f'''
+                <div style="margin-bottom: 5px;">
+                    <a href="{url}" target="_blank" title="Clique para ver a imagem em tamanho original">
+                        <img src="{url}" style="max-width: 250px; max-height: 200px; border-radius: 6px; border: 1px solid #ddd; display: block;" />
+                    </a>
+                    <span style="font-size: 0.8rem; color: #555;">📎 {html.escape(nome)}</span>
+                </div>
+            '''
+        else:
+            html_out += f'''
+                <div>
+                    📄 <a href="{url}" target="_blank" download="{html.escape(nome)}" style="text-decoration: none; color: #2196f3; font-weight: bold;">
+                        {html.escape(nome)}
+                    </a>
+                </div>
+            '''
             
-            # Gera um caminho único no Storage
-            file_path = f"anexos/quill_{uuid.uuid4()}.{ext}"
-            
-            # Faz o upload para o bucket do Supabase
-            supabase.storage.from_(bucket_name).upload(
-                file_path,
-                file_bytes,
-                file_options={"content-type": f"image/{ext}"}
-            )
-            
-            # Obtém a URL pública da imagem salva
-            public_url_res = supabase.storage.from_(bucket_name).get_public_url(file_path)
-            if isinstance(public_url_res, dict):
-                public_url = public_url_res.get("publicUrl") or public_url_res.get("public_url") or public_url_res.get("signedURL", "")
-            else:
-                public_url = str(public_url_res)
-                
-            # Substitui o base64 gigante pela URL pública na tag HTML original
-            tag_original = match.group(0)
-            tag_nova = tag_original.replace(f"data:image/{match.group(1)};base64,{b64_data}", public_url)
-            return tag_nova
-        except Exception as e:
-            print(f"Erro ao processar imagem colada no editor: {e}")
-            return match.group(0) # Retorna a tag original se ocorrer algum erro
-            
-    # Executa a substituição para todas as imagens encontradas no texto rico
-    html_processado = padrao_img.sub(substituir_imagem, html_content)
-    return html_processado
+    html_out += "</div>"
+    return html_out
 
 # --- MENU LATERAL (SE ADMIN LOGADO) ---
 pagina_selecionada = "Painel de Administrador"
@@ -446,9 +445,9 @@ if not st.session_state.admin_logged_in:
             key="quill_resumo_chamado"
         )
         
-        # Carregador de imagens específico para ilustrar o problema na descrição
-        imagens_descricao = st.file_uploader(
-            "Adicionar arquivos à descrição (Opcional)", 
+        # Carregador geral de arquivos (qualquer tipo)
+        arquivos_descricao = st.file_uploader(
+            "Adicionar arquivos/anexos à descrição (Opcional)", 
             accept_multiple_files=True,
             key="imagens_desc_form"
         )
@@ -460,26 +459,18 @@ if not st.session_state.admin_logged_in:
             st.error("Por favor, preencha todos os campos obrigatórios (*).")
         else:
             try:
-                # 1. Faz o upload das imagens da descrição para o Supabase Storage
-                urls_imgs_desc = []
-                if imagens_descricao:
-                    with st.spinner("A enviar imagens da descrição..."):
-                        urls_imgs_desc = upload_images(imagens_descricao)
-
-                # 2. Constrói o HTML final anexando as imagens no fim do texto do resumo
-                resumo_final = resumo
-                if urls_imgs_desc:
-                    resumo_final += "<br><br><b>Imagens ilustrativas:</b><br>"
-                    for url in urls_imgs_desc:
-                        resumo_final += f'<img src="{url}" style="max-width: 100%; border-radius: 6px; margin-top: 5px; border: 1px solid #ddd;"/><br>'
+                anexos_info = []
+                if arquivos_descricao:
+                    with st.spinner("A enviar arquivos..."):
+                        anexos_info = upload_files(arquivos_descricao)
 
                 dados_chamado = {
                     "nome": nome,
                     "email": email,
                     "titulo": titulo,
                     "importador": importador,
-                    "resumo": resumo_final, # Guarda o texto + as imagens já alojadas no Storage
-                    "imagens": [], # Pode manter vazio ou usar para ficheiros gerais
+                    "resumo": resumo,
+                    "imagens": anexos_info, # Guarda lista com URLs e nomes originais
                     "status": "Em Aberto",
                     "responsavel": "Não atribuído",
                     "historico": [],
@@ -639,26 +630,8 @@ else:
                     st.write(f"**Data de Abertura:** {data_criacao_br}")
                     st.write(f"**Descrição:**")
                     
-                    # Estilo embutido para garantir que as imagens da descrição fiquem responsivas e com efeito de clique
                     st.markdown(
                         f"""
-                        <style>
-                        /* Estiliza as imagens coladas via Quill dentro da descrição para ficarem organizadas */
-                        .descricao-chamado img {{
-                            max-width: 100% !important;
-                            height: auto !important;
-                            border-radius: 6px;
-                            border: 1px solid #ddd;
-                            margin-top: 8px;
-                            margin-bottom: 8px;
-                            cursor: pointer;
-                            transition: transform 0.2s;
-                        }}
-                        .descricao-chamado img:hover {{
-                            transform: scale(1.01);
-                        }}
-                        </style>
-                        
                         <div class="descricao-chamado" style="background-color: #f8f9fa; border: 1px solid #e9ecef; padding: 12px; border-radius: 6px; color: #31333F;">
                             {c['resumo']}
                         </div>
@@ -669,24 +642,7 @@ else:
                     imgs = c.get("imagens", [])
                     if imgs:
                         st.write("**Anexos Iniciais:**")
-                        cols = st.columns(min(len(imgs), 3))
-                        for idx, item in enumerate(imgs):
-                            if isinstance(item, dict):
-                                img_url = item.get("publicUrl") or item.get("public_url") or item.get("signedURL", "")
-                            else:
-                                img_url = str(item)
-
-                            if img_url and img_url.startswith("http"):
-                                col_atual = cols[idx % 3]
-                                with col_atual:
-                                    st.markdown(
-                                        f"""
-                                        <a href="{img_url}" target="_blank" title="Clique para ver a imagem em tamanho original">
-                                            <img src="{img_url}" style="width: 100%; border-radius: 6px; border: 1px solid #ddd; cursor: pointer; transition: 0.2s;" />
-                                        </a>
-                                        """,
-                                        unsafe_allow_html=True
-                                    )
+                        st.markdown(renderizar_anexos_html(imgs), unsafe_allow_html=True)
 
                     st.markdown("---")
                     
@@ -707,17 +663,7 @@ else:
                             anexos_hist = h.get("anexos", [])
                             if anexos_hist:
                                 st.caption("Anexos desta atualização:")
-                                cols_h = st.columns(min(len(anexos_hist), 3))
-                                for idx_h, anexo_url in enumerate(anexos_hist):
-                                    with cols_h[idx_h % 3]:
-                                        st.markdown(
-                                            f"""
-                                            <a href="{anexo_url}" target="_blank" title="Ver anexo">
-                                                <img src="{anexo_url}" style="width: 100%; border-radius: 4px; border: 1px solid #ddd;" />
-                                            </a>
-                                            """,
-                                            unsafe_allow_html=True
-                                        )
+                                st.markdown(renderizar_anexos_html(anexos_hist), unsafe_allow_html=True)
                             st.markdown("---")
                     else:
                         st.caption("Nenhuma atualização registrada ainda.")
@@ -781,10 +727,10 @@ else:
                                     st.warning("Por favor, preencha a observação.")
                                 else:
                                     try:
-                                        urls_novos_anexos = []
+                                        anexos_novos_info = []
                                         if novos_anexos:
                                             with st.spinner("Enviando anexos..."):
-                                                urls_novos_anexos = upload_images(novos_anexos)
+                                                anexos_novos_info = upload_files(novos_anexos)
 
                                         data_registro_iso = datetime.now(fuso_br).isoformat()
                                         data_hora_combinada = datetime.combine(data_input, hora_input).replace(tzinfo=fuso_br)
@@ -799,7 +745,7 @@ else:
                                             "observacao": observacao,
                                             "data_registro": data_registro_iso,
                                             "data_evento": data_evento_iso,
-                                            "anexos": urls_novos_anexos
+                                            "anexos": anexos_novos_info
                                         }
 
                                         historico_atual = c.get("historico", [])

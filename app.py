@@ -3,11 +3,24 @@ from supabase import create_client, Client
 import uuid
 from datetime import datetime, timezone, timedelta
 
-# --- CONFIGURAÇÃO PÁGINA ---
+# --- ESTADO DE AUTENTICAÇÃO E LOGS (Necessário antes do set_page_config) ---
+if "admin_logged_in" not in st.session_state:
+    st.session_state.admin_logged_in = False
+
+if "crud_logs" not in st.session_state:
+    st.session_state.crud_logs = []
+
+if "status_filter" not in st.session_state:
+    st.session_state.status_filter = "Todos"
+
+if "crit_filter" not in st.session_state:
+    st.session_state.crit_filter = "Todos"
+
+# --- CONFIGURAÇÃO PÁGINA (Dinâmica: wide para admin, centered para usuário) ---
 st.set_page_config(
     page_title="Suporte & Chamados",
     page_icon="🎫",
-    layout="wide"
+    layout="wide" if st.session_state.admin_logged_in else "centered"
 )
 
 st.markdown(
@@ -82,7 +95,7 @@ st.markdown(
     }
     [class*="st-key-chamado_"] > div > [data-testid="stExpander"] > details {
         border-radius: 0.5rem !important;
-        border: none !important;         /* evita borda dupla (a do details + a do expander) */
+        border: none !important;       /* evita borda dupla (a do details + a do expander) */
         background: transparent !important;
     }
     [class*="st-key-chamado_"] > div > [data-testid="stExpander"] > details > summary {
@@ -132,19 +145,6 @@ def init_supabase() -> Client:
     return create_client(url, key)
 
 supabase = init_supabase()
-
-# --- ESTADO DE AUTENTICAÇÃO E LOGS ---
-if "admin_logged_in" not in st.session_state:
-    st.session_state.admin_logged_in = False
-
-if "crud_logs" not in st.session_state:
-    st.session_state.crud_logs = []
-
-if "status_filter" not in st.session_state:
-    st.session_state.status_filter = "Todos"
-
-if "crit_filter" not in st.session_state:
-    st.session_state.crit_filter = "Todos"
 
 def registrar_log(acao, detalhes):
     fuso_br = timezone(timedelta(hours=-3))
@@ -639,11 +639,9 @@ if not st.session_state.admin_logged_in:
     with st.popover("🔒 Acesso Restrito (Admin)", use_container_width=False):
         senha_input = st.text_input("Digite a senha do Admin", type="password", key="admin_login_password_input")
         if st.button("Entrar", key="admin_login_submit_btn"):
-            str_senha = st.secrets.get("ADMIN_PASSWORD")
-            if senha_input == str_senha:
+            if senha_input == st.secrets.get("ADMIN_PASSWORD"):
                 st.session_state.admin_logged_in = True
-                registrar_log("READ", "Administrador acessou o painel.")
-                st.success("Acesso liberado!")
+                st.success("Login efetuado com sucesso!")
                 st.rerun()
             else:
                 st.error("Senha incorreta!")

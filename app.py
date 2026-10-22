@@ -365,51 +365,32 @@ def formatar_data_br(data_str):
     except Exception:
         return data_str
 
-# --- RENDERIZADOR INTELIGENTE DE ANEXOS ---
-def renderizar_anexos_html(lista_anexos):
+# --- RENDERIZADOR NATIVO DE ANEXOS ---
+def renderizar_anexos(lista_anexos):
     """
-    Verifica se o anexo é imagem ou outro tipo de arquivo.
-    - Imagens: Renderiza a miniatura clicável.
-    - Outros: Renderiza um link com o nome original do arquivo.
+    Renderiza os anexos utilizando componentes nativos do Streamlit para evitar
+    erros de interpretação de tags HTML cruas na tela.
     """
     if not lista_anexos:
-        return ""
+        return
     
     EXTENSOES_IMAGEM = {'png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp'}
-    html_out = "<div style='margin-top: 8px; display: flex; flex-direction: column; gap: 6px;'>"
     
     for item in lista_anexos:
-        # Suporte retrocompatível caso seja apenas string ou dicionário antigo
         if isinstance(item, dict):
             url = item.get("url") or item.get("publicUrl") or item.get("public_url") or item.get("signedURL", "")
             nome = item.get("name", "Arquivo Anexado")
         else:
             url = str(item)
-            # Tenta extrair o nome da URL ou define um genérico
             nome = url.split("/")[-1].split("?")[0] if "/" in url else "Arquivo Anexado"
 
         extensao = nome.split(".")[-1].lower() if "." in nome else ""
 
-        if extensao in EXTENSOES_IMAGEM:
-            html_out += f'''
-                <div style="margin-bottom: 5px;">
-                    <a href="{url}" target="_blank" title="Clique para ver a imagem em tamanho original">
-                        <img src="{url}" style="max-width: 250px; max-height: 200px; border-radius: 6px; border: 1px solid #ddd; display: block;" />
-                    </a>
-                    <span style="font-size: 0.8rem; color: #555;">📎 {html.escape(nome)}</span>
-                </div>
-            '''
-        else:
-            html_out += f'''
-                <div>
-                    📄 <a href="{url}" target="_blank" download="{html.escape(nome)}" style="text-decoration: none; color: #2196f3; font-weight: bold;">
-                        {html.escape(nome)}
-                    </a>
-                </div>
-            '''
-            
-    html_out += "</div>"
-    return html_out
+        if url and url.startswith("http"):
+            if extensao in EXTENSOES_IMAGEM:
+                st.image(url, caption=f"📎 {nome}", width=300)
+            else:
+                st.markdown(f"📄 [{nome}]({url})", unsafe_allow_html=False)
 
 # --- MENU LATERAL (SE ADMIN LOGADO) ---
 pagina_selecionada = "Painel de Administrador"
@@ -445,7 +426,6 @@ if not st.session_state.admin_logged_in:
             key="quill_resumo_chamado"
         )
         
-        # Carregador geral de arquivos (qualquer tipo)
         arquivos_descricao = st.file_uploader(
             "Adicionar arquivos/anexos à descrição (Opcional)", 
             accept_multiple_files=True,
@@ -470,7 +450,7 @@ if not st.session_state.admin_logged_in:
                     "titulo": titulo,
                     "importador": importador,
                     "resumo": resumo,
-                    "imagens": anexos_info, # Guarda lista com URLs e nomes originais
+                    "imagens": anexos_info,
                     "status": "Em Aberto",
                     "responsavel": "Não atribuído",
                     "historico": [],
@@ -613,10 +593,8 @@ else:
                 criticidade_atual = c.get('criticidade')
                 tag_crit = tag_criticidade(criticidade_atual)
                 
-                # --- CÁLCULO DO TEMPO DESDE A ÚLTIMA ATUALIZAÇÃO ---
                 tempo_decorrido = calcular_tempo_ultima_atualizacao(c)
 
-                # --- TÍTULO DO EXPANDER CORRIGIDO ---
                 titulo_expander = f"{c['status'].upper()} - {c['titulo']} (Por: {c['nome']} | Resp: {resp_atual_badge})          ⏱️ {tempo_decorrido}"
             
                 with st.container(key=f"chamado_{classe_css}_{tag_crit}_{c['id']}"), \
@@ -642,7 +620,7 @@ else:
                     imgs = c.get("imagens", [])
                     if imgs:
                         st.write("**Anexos Iniciais:**")
-                        st.markdown(renderizar_anexos_html(imgs), unsafe_allow_html=True)
+                        renderizar_anexos(imgs)
 
                     st.markdown("---")
                     
@@ -663,7 +641,7 @@ else:
                             anexos_hist = h.get("anexos", [])
                             if anexos_hist:
                                 st.caption("Anexos desta atualização:")
-                                st.markdown(renderizar_anexos_html(anexos_hist), unsafe_allow_html=True)
+                                renderizar_anexos(anexos_hist)
                             st.markdown("---")
                     else:
                         st.caption("Nenhuma atualização registrada ainda.")

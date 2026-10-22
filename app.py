@@ -136,7 +136,7 @@ def badge_criticidade(criticidade):
         return '<span style="background-color: #212121; color: #ffffff; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 0.85em;">💣 Crítico</span>'
     if criticidade == "Urgente":
         return '<span style="background-color: #ff9800; color: #000000; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 0.85em;">❗ Urgente</span>'
-    return '<span style="background-color: #9e9e9e; color: #ffffff; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 0.85em;">Sem criticidade</span>'
+    return '<span style="background-color: #9e9e9e; color: #ffffff; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 0.85em;">Normal</span>'
 
 # --- FUNÇÃO AUXILIAR DE CORES DOS STATUS ---
 def badge_status(status):
@@ -515,7 +515,7 @@ else:
                                         data_hora_combinada = datetime.combine(data_input, hora_input).replace(tzinfo=fuso_br)
                                         data_evento_iso = data_hora_combinada.isoformat()
 
-                                        criticidade_salvar = None if nova_criticidade == "Sem criticidade" else nova_criticidade
+                                        criticidade_salvar = None if nova_criticidade == "Normal" else nova_criticidade
 
                                         novo_registro = {
                                             "status": novo_status,

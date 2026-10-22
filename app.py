@@ -10,18 +10,19 @@ st.set_page_config(
     layout="centered"
 )
 
-# --- CSS PERSONALIZADO PARA BOTÕES E EXPANDERS COLORIDOS ---
 st.markdown(
     """
     <style>
-    /* Permite que os botões do filtro ajustem a largura pelo conteúdo e fiquem mais próximos */
-    div.stHorizontalBlock {
-        gap: 6px !important;
+    /* ===== VARIÁVEIS DE ESPAÇAMENTO (ajuste aqui) ===== */
+    :root {
+        --espaco-fechado: -8px;   /* distância entre chamados FECHADOS (mais negativo = mais colado) */
+        --espaco-aberto: 24px;    /* espaço abaixo de um chamado ABERTO (nunca sobrepõe o próximo) */
+        --espaco-fim-expander: 20px; /* respiro no fim do conteúdo de QUALQUER expander (inclusive o de atualização) */
     }
-    div.stHorizontalBlock > div {
-        flex: 0 1 auto !important;
-        width: auto !important;
-    }
+
+    /* Botões de filtro */
+    div.stHorizontalBlock { gap: 6px !important; }
+    div.stHorizontalBlock > div { flex: 0 1 auto !important; width: auto !important; }
     div.stButton > button {
         width: auto !important;
         white-space: nowrap !important;
@@ -29,31 +30,37 @@ st.markdown(
         padding-right: 12px !important;
     }
 
-    /* Aplica a aproximação suave constante no container do card (fechado ou aberto) */
-    div[class*="expander-"] {
-        margin-bottom: -50px !important; /* Ajuste aqui entre -15px e -25px para o espaçamento ideal fechado */
+    /* ===== CARD DO CHAMADO: FECHADO ===== */
+    [class*="st-key-chamado_"] {
+        margin-bottom: var(--espaco-fechado) !important;
     }
 
-    /* Garante que o elemento do Streamlit limpe as margens internas que causam grandes saltos */
-    [data-testid="stExpander"] {
-        margin-bottom: 0px !important;
+    /* ===== CARD DO CHAMADO: ABERTO (só o expander principal, não os internos) ===== */
+    [class*="st-key-chamado_"]:has(> div > [data-testid="stExpander"] > details[open]) {
+        margin-bottom: var(--espaco-aberto) !important;
     }
 
-    /* Cores de fundo dinâmicas para os expanders conforme o status */
-    .expander-aberto [data-testid="stExpander"] {
-        background-color: #fffde7 !important; /* Amarelo bem claro */
+    /* Respiro no fim de TODO expander aberto (principal e o de "Atualizar ou Excluir") */
+    [data-testid="stExpander"] details[open] > div[data-testid="stExpanderDetails"],
+    [data-testid="stExpander"] details[open] > div:last-child {
+        padding-bottom: var(--espaco-fim-expander) !important;
+    }
+
+    /* ===== CORES POR STATUS (apenas o expander principal) ===== */
+    [class*="st-key-chamado_aberto_"] > div > [data-testid="stExpander"] {
+        background-color: #fffde7 !important;
         border: 1px solid #ffeb3b !important;
     }
-    .expander-dev [data-testid="stExpander"] {
-        background-color: #e3f2fd !important; /* Azul bem claro */
+    [class*="st-key-chamado_dev_"] > div > [data-testid="stExpander"] {
+        background-color: #e3f2fd !important;
         border: 1px solid #2196f3 !important;
     }
-    .expander-andamento [data-testid="stExpander"] {
-        background-color: #ffebee !important; /* Vermelho bem claro */
+    [class*="st-key-chamado_andamento_"] > div > [data-testid="stExpander"] {
+        background-color: #ffebee !important;
         border: 1px solid #f44336 !important;
     }
-    .expander-finalizado [data-testid="stExpander"] {
-        background-color: #e8f5e9 !important; /* Verde bem claro */
+    [class*="st-key-chamado_finalizado_"] > div > [data-testid="stExpander"] {
+        background-color: #e8f5e9 !important;
         border: 1px solid #4caf50 !important;
     }
     </style>
@@ -103,15 +110,13 @@ def badge_status(status):
 
 # Função auxiliar para mapear a classe CSS do expander baseada no status
 def obter_classe_expander(status):
-    if status == "Em Aberto":
-        return "expander-aberto"
-    elif status == "Enviado ao Desenvolvimento":
-        return "expander-dev"
-    elif status == "Em Andamento":
-        return "expander-andamento"
-    elif status == "Finalizado":
-        return "expander-finalizado"
-    return ""
+    mapa = {
+        "Em Aberto": "aberto",
+        "Enviado ao Desenvolvimento": "dev",
+        "Em Andamento": "andamento",
+        "Finalizado": "finalizado",
+    }
+    return mapa.get(status, "outro")
 
 # --- UPLOAD DE IMAGENS / ARQUIVOS ---
 def upload_images(files):
@@ -287,10 +292,9 @@ else:
                 status_html = badge_status(c['status'])
                 classe_css = obter_classe_expander(c['status'])
                 importador_val = c.get('importador', 'Não informado')
-                
-                # Envolve o expander num bloco HTML com a classe correspondente à cor do status
-                st.markdown(f'<div class="{classe_css}">', unsafe_allow_html=True)
-                with st.expander(f"{c['status'].upper()} - {c['titulo']} (Por: {c['nome']} | Resp: {resp_atual_badge})"):
+            
+                with st.container(key=f"chamado_{classe_css}_{c['id']}"), \
+                     st.expander(f"{c['status'].upper()} - {c['titulo']} (Por: {c['nome']} | Resp: {resp_atual_badge})"):
                     st.markdown(f"**Status Atual:** {status_html}", unsafe_allow_html=True)
                     st.write(f"**Solicitante:** {c['nome']} ({c['email']})")
                     st.write(f"**Importador:** {importador_val}")
@@ -464,7 +468,6 @@ else:
                                     st.error(f"Erro ao excluir chamado: {e}")
                             else:
                                 st.error("Senha de administrador incorreta!")
-                st.markdown('</div>', unsafe_allow_html=True)
 
         except Exception as e:
             st.error(f"Erro ao carregar chamados: {e}")

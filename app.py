@@ -29,15 +29,20 @@ st.markdown(
         padding-right: 12px !important;
     }
 
-    /* Espaçamento padrão fechado (aproximado) */
-    [data-testid="stExpander"] {
+    /* Por padrão (fechado), aplica a margem negativa no container pai para aproximar os cards */
+    div[class*="expander-"] {
         margin-bottom: -50px !important;
         transition: margin 0.2s ease;
     }
 
-    /* Quando o expander estiver ABERTO (aria-expanded="true"), remove a margem negativa e dá respiro embaixo */
-    [data-testid="stExpander"] [aria-expanded="true"] {
+    /* Quando qualquer expander dentro do container estiver ABERTO, zera a margem negativa do container pai */
+    div[class*="expander-"]:has([aria-expanded="true"]) {
         margin-bottom: 15px !important;
+    }
+
+    /* Garante que o stExpander interno não use margem fixa conflitante */
+    [data-testid="stExpander"] {
+        margin-bottom: 0px !important;
     }
 
     /* Cores de fundo dinâmicas para os expanders conforme o status */

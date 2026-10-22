@@ -29,9 +29,9 @@ st.markdown(
         padding-right: 12px !important;
     }
 
-    /* Reduz a margem entre os cards dos chamados */
+    /* Ajusta o espaçamento correto entre os cards dos chamados para evitar sobreposição ao expandir */
     [data-testid="stExpander"] {
-        margin-bottom: -30px !important; /* Ajuste este valor para controlar a proximidade */
+        margin-bottom: 12px !important;
     }
 
     /* Cores de fundo dinâmicas para os expanders conforme o status */
@@ -87,7 +87,7 @@ def registrar_log(acao, detalhes):
 def badge_status(status):
     """Retorna uma string HTML estilizada para cada status."""
     cores = {
-        "Em Aberto": {"bg": "#ffeb3b", "color": "#000000"},              # Amarelo
+        "Em Aberto": {"bg": "#ffeb3b", "color": "#000000"},            # Amarelo
         "Enviado ao Desenvolvimento": {"bg": "#2196f3", "color": "#ffffff"}, # Azul
         "Em Andamento": {"bg": "#f44336", "color": "#ffffff"},          # Vermelho
         "Finalizado": {"bg": "#4caf50", "color": "#ffffff"}             # Verde

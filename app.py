@@ -174,8 +174,8 @@ if not st.session_state.admin_logged_in:
     with st.form(key="form_chamado", clear_on_submit=True):
         nome = st.text_input("Seu Nome*", placeholder="Ex: Maria Silva")
         email = st.text_input("Seu E-mail*", placeholder="Ex: maria@multprocessing.com.br")
-        titulo = st.text_input("Título do Chamado*", placeholder="Ex: Ajustar tag nota fiscal cliente X")
-        importador = st.text_input("Importador*", placeholder="Ex: Nome ou código do importador")
+        titulo = st.text_input("Título do Chamado*", placeholder="Ex: Ajustar tag nota fiscal")
+        importador = st.text_input("Importador*", placeholder="Ex: Nome do importador")
         resumo = st.text_area("Resumo do Problema*", placeholder="Descreva um resumo do chamado...", height=120)
         imagens = st.file_uploader(
             "Anexar imagens/prints da tela", 

@@ -154,7 +154,7 @@ def badge_status(status):
     cores = {
         "Em Aberto": {"bg": "#ff80Fd", "color": "#F527EE"},            # Amarelo
         "Enviado ao Desenvolvimento": {"bg": "#2196f3", "color": "#ffffff"}, # Azul
-        "Em Andamento": {"bg": "#f44336", "color": "#ffffff"},          # Vermelho
+        "Em Andamento": {"bg": "#e427f5", "color": "#ffffff"},          # Vermelho
         "Finalizado": {"bg": "#4caf50", "color": "#ffffff"}               # Verde
     }
     
@@ -331,7 +331,7 @@ else:
                     st.session_state.status_filter = "Enviado ao Desenvolvimento"
                     st.rerun()
             with col_andamento:
-                if st.button(f"🔴 Em Andamento ({contar_status('Em Andamento')})", type="primary" if st.session_state.status_filter == "Em Andamento" else "secondary"):
+                if st.button(f"🟣 Em Andamento ({contar_status('Em Andamento')})", type="primary" if st.session_state.status_filter == "Em Andamento" else "secondary"):
                     st.session_state.status_filter = "Em Andamento"
                     st.rerun()
             with col_fin:

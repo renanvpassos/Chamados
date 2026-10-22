@@ -152,7 +152,7 @@ def badge_criticidade(criticidade):
 def badge_status(status):
     """Retorna uma string HTML estilizada para cada status."""
     cores = {
-        "Em Aberto": {"bg": "#ffeb3b", "color": "#000000"},            # Amarelo
+        "Em Aberto": {"bg": "#ff80Fd", "color": "#F527EE"},            # Amarelo
         "Enviado ao Desenvolvimento": {"bg": "#2196f3", "color": "#ffffff"}, # Azul
         "Em Andamento": {"bg": "#f44336", "color": "#ffffff"},          # Vermelho
         "Finalizado": {"bg": "#4caf50", "color": "#ffffff"}               # Verde

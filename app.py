@@ -64,6 +64,20 @@ st.markdown(
         border: 1px solid #4caf50 !important;
     }
 
+    /* ===== BORDAS ARREDONDADAS NOS CARDS COLORIDOS ===== */
+    [class*="st-key-chamado_"] > div > [data-testid="stExpander"] {
+        border-radius: 0.5rem !important;
+        overflow: hidden !important;
+    }
+    [class*="st-key-chamado_"] > div > [data-testid="stExpander"] > details {
+        border-radius: 0.5rem !important;
+        border: none !important;          /* evita borda dupla (a do details + a do expander) */
+        background: transparent !important;
+    }
+    [class*="st-key-chamado_"] > div > [data-testid="stExpander"] > details > summary {
+        border-radius: 0.5rem !important;
+    }
+
     /* ===== URGENTE / CRÍTICO: FUNDO VERMELHO (sobrescreve a cor do status) ===== */
     [class*="st-key-chamado_"][class*="_urg_"] > div > [data-testid="stExpander"] {
         background-color: #ef9a9a !important;

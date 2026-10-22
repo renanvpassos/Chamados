@@ -29,18 +29,12 @@ st.markdown(
         padding-right: 12px !important;
     }
 
-    /* Por padrão (fechado), aplica a margem negativa no container pai para aproximar os cards */
+    /* Aplica a aproximação suave constante no container do card (fechado ou aberto) */
     div[class*="expander-"] {
-        margin-bottom: -50px !important;
-        transition: margin 0.2s ease;
+        margin-bottom: -18px !important; /* Ajuste aqui entre -15px e -25px para o espaçamento ideal fechado */
     }
 
-    /* Quando qualquer expander dentro do container estiver ABERTO, zera a margem negativa do container pai */
-    div[class*="expander-"]:has([aria-expanded="true"]) {
-        margin-bottom: 15px !important;
-    }
-
-    /* Garante que o stExpander interno não use margem fixa conflitante */
+    /* Garante que o elemento do Streamlit limpe as margens internas que causam grandes saltos */
     [data-testid="stExpander"] {
         margin-bottom: 0px !important;
     }
@@ -66,7 +60,6 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
-
 # --- CONEXÃO SUPABASE ---
 def init_supabase() -> Client:
     url = st.secrets["SUPABASE_URL"]

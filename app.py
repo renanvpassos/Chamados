@@ -635,14 +635,33 @@ else:
                     data_criacao_br = formatar_data_br(c.get('created_at'))
                     st.write(f"**Data de Abertura:** {data_criacao_br}")
                     st.write(f"**Descrição:**")
+                    
+                    # Estilo embutido para garantir que as imagens da descrição fiquem responsivas e com efeito de clique
                     st.markdown(
                         f"""
-                        <div style="background-color: #f8f9fa; border: 1px solid #e9ecef; padding: 12px; border-radius: 6px; color: #31333F;">
+                        <style>
+                        /* Estiliza as imagens coladas via Quill dentro da descrição para ficarem organizadas */
+                        .descricao-chamado img {{
+                            max-width: 100% !important;
+                            height: auto !important;
+                            border-radius: 6px;
+                            border: 1px solid #ddd;
+                            margin-top: 8px;
+                            margin-bottom: 8px;
+                            cursor: pointer;
+                            transition: transform 0.2s;
+                        }}
+                        .descricao-chamado img:hover {{
+                            transform: scale(1.01);
+                        }}
+                        </style>
+                        
+                        <div class="descricao-chamado" style="background-color: #f8f9fa; border: 1px solid #e9ecef; padding: 12px; border-radius: 6px; color: #31333F;">
                             {c['resumo']}
                         </div>
                         """,
                         unsafe_allow_html=True
-                    )     
+                    )  
 
                     imgs = c.get("imagens", [])
                     if imgs:

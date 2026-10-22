@@ -34,6 +34,19 @@ def registrar_log(acao, detalhes):
         "detalhes": detalhes
     })
 
+# --- FUNÇÃO AUXILIAR DE CORES DOS STATUS ---
+def badge_status(status):
+    """Retorna uma string HTML estilizada para cada status."""
+    cores = {
+        "Em Aberto": {"bg": "#ffeb3b", "color": "#000000"},              # Amarelo
+        "Enviado ao Desenvolvimento": {"bg": "#2196f3", "color": "#ffffff"}, # Azul
+        "Em Andamento": {"bg": "#f44336", "color": "#ffffff"},          # Vermelho
+        "Finalizado": {"bg": "#4caf50", "color": "#ffffff"}             # Verde
+    }
+    
+    config = cores.get(status, {"bg": "#9e9e9e", "color": "#ffffff"}) # Cinza padrão se não achar
+    return f'<span style="background-color: {config["bg"]}; color: {config["color"]}; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 0.85em;">{status}</span>'
+
 # --- UPLOAD DE IMAGENS / ARQUIVOS ---
 def upload_images(files):
     urls = []
@@ -183,7 +196,12 @@ else:
 
             for c in chamados:
                 resp_atual_badge = c.get('responsavel', 'Não atribuído')
-                with st.expander(f"[{c['status'].upper()}] - {c['titulo']} (Por: {c['nome']} | Resp: {resp_atual_badge})"):
+                status_html = badge_status(c['status'])
+                
+                # Exibição do Expander com Status Colorido via HTML
+                with st.expander(f"{c['status'].upper()} - {c['titulo']} (Por: {c['nome']} | Resp: {resp_atual_badge})"):
+                    # Renderiza o status visualmente customizado dentro do expander
+                    st.markdown(f"**Status Atual:** {status_html}", unsafe_allow_html=True)
                     st.write(f"**Solicitante:** {c['nome']} ({c['email']})")
                     st.write(f"**Responsável Atual:** {resp_atual_badge}")
                     data_criacao_br = formatar_data_br(c.get('created_at'))
@@ -223,8 +241,9 @@ else:
                             data_registro_br = formatar_data_br(h.get('data_registro') or h.get('data'))
                             data_evento_br = formatar_data_br(h.get('data_evento') or h.get('data'))
                             responsavel_update = h.get('responsavel', 'Não informado')
+                            status_hist_html = badge_status(h.get('status'))
                             
-                            st.markdown(f"🔹 **Registrado em:** {data_registro_br} | **Responsável:** `{responsavel_update}` | **Status:** `{h.get('status')}`")
+                            st.markdown(f"🔹 **Registrado em:** {data_registro_br} | **Responsável:** `{responsavel_update}` | **Status:** {status_hist_html}", unsafe_allow_html=True)
                             st.markdown(f"> **[{data_evento_br}]** {h.get('observacao')}")
                             
                             anexos_hist = h.get("anexos", [])

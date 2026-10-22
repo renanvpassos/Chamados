@@ -67,11 +67,11 @@ st.markdown(
     /* ===== URGENTE / CRÍTICO: FUNDO VERMELHO (sobrescreve a cor do status) ===== */
     [class*="st-key-chamado_"][class*="_urg_"] > div > [data-testid="stExpander"] {
         background-color: #ef9a9a !important;
-        border: 1px solid #e53935 !important;
+        border: 1px solid #ef9a9a !important;
     }
     [class*="st-key-chamado_"][class*="_crit_"] > div > [data-testid="stExpander"] {
         background-color: #ff8585 !important;
-        border: 2px solid #b71c1c !important;
+        border: 2px solid #ff8585 !important;
     }
 
     /* ===== ÍCONES DE CRITICIDADE (canto direito do chamado) ===== */

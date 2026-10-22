@@ -99,11 +99,20 @@ st.markdown(
     }
     [class*="st-key-chamado_"] > div > [data-testid="stExpander"] > details {
         border-radius: 0.5rem !important;
-        border: none !important;       /* evita borda dupla (a do details + a do expander) */
+        border: none !important;
         background: transparent !important;
     }
     [class*="st-key-chamado_"] > div > [data-testid="stExpander"] > details > summary {
         border-radius: 0.5rem !important;
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+    }
+
+    /* Ajuste para o conteúdo interno do summary se alinhar corretamente em flex */
+    [class*="st-key-chamado_"] > div > [data-testid="stExpander"] > details > summary > p {
+        width: 100% !important;
+        margin-bottom: 0 !important;
     }
 
     /* ===== URGENTE / CRÍTICO: FUNDO VERMELHO (sobrescreve a cor do status, exceto Finalizado) ===== */
@@ -119,12 +128,12 @@ st.markdown(
     /* ===== ÍCONES DE CRITICIDADE (canto direito do chamado) ===== */
     [class*="st-key-chamado_"] > div > [data-testid="stExpander"] > details > summary {
         position: relative;
-        padding-right: 5rem !important;
+        padding-right: 6rem !important;
     }
     [class*="st-key-chamado_"][class*="_crit_"] > div > [data-testid="stExpander"] > details > summary::after {
         content: "💣";
         position: absolute;
-        right: 2.8rem;
+        right: 3.5rem;
         top: 50%;
         transform: translateY(-50%);
         font-size: 1.2rem;
@@ -132,7 +141,7 @@ st.markdown(
     [class*="st-key-chamado_"][class*="_urg_"] > div > [data-testid="stExpander"] > details > summary::after {
         content: "❗";
         position: absolute;
-        right: 2.8rem;
+        right: 3.5rem;
         top: 50%;
         transform: translateY(-50%);
         font-size: 1.2rem;
@@ -268,19 +277,17 @@ def calcular_tempo_ultima_atualizacao(chamado):
     fuso_br = timezone(timedelta(hours=-3))
     agora = datetime.now(fuso_br)
     
-    # Tenta pegar a data do último item do histórico
     historico = chamado.get("historico", [])
     data_ref_str = None
     if historico and isinstance(historico, list):
         ultimo_evento = historico[-1]
         data_ref_str = ultimo_evento.get('data_registro') or ultimo_evento.get('data_evento') or ultimo_evento.get('data')
     
-    # Se não houver histórico, pega a data de criação do chamado
     if not data_ref_str:
         data_ref_str = chamado.get("created_at")
         
     if not data_ref_str:
-        return "Tempo Indisponível"
+        return "N/A"
 
     try:
         if data_ref_str.endswith("Z"):
@@ -549,8 +556,8 @@ else:
                 # --- CÁLCULO DO TEMPO DESDE A ÚLTIMA ATUALIZAÇÃO ---
                 tempo_decorrido = calcular_tempo_ultima_atualizacao(c)
 
-                # --- TÍTULO DO EXPANDER COM O TEMPO À DIREITA ---
-                titulo_expander = f"{c['status'].upper()} - {c['titulo']} (Por: {c['nome']} | Resp: {resp_atual_badge})  |  ⏱️ {tempo_decorrido}"
+                # --- TÍTULO DO EXPANDER UTILIZANDO SPAN COM FLOAT/FLEX À DIREITA ---
+                titulo_expander = f"{c['status'].upper()} - {c['titulo']} (Por: {c['nome']} | Resp: {resp_atual_badge}) <span style='float: right; margin-right: 2.5rem; font-weight: 500; opacity: 0.9;'>⏱️ {tempo_decorrido}</span>"
             
                 with st.container(key=f"chamado_{classe_css}_{tag_crit}_{c['id']}"), \
                      st.expander(titulo_expander):

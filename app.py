@@ -56,7 +56,7 @@ st.markdown(
         border: 1px solid #2196f3 !important;
     }
     [class*="st-key-chamado_andamento_"] > div > [data-testid="stExpander"] {
-        background-color: #ffebee !important;
+        background-color: #ffCfff !important;
         border: 1px solid #f44336 !important;
     }
     [class*="st-key-chamado_finalizado_"] > div > [data-testid="stExpander"] {

@@ -636,7 +636,7 @@ else:
 # ----------------------------------------------------
 st.markdown("---")
 if not st.session_state.admin_logged_in:
-    with st.popover("🔒 Acesso Restrito (Admin)", use_container_width=False):
+    with st.popover("🔒Gestão de Chamados", use_container_width=False):
         senha_input = st.text_input("Digite a senha do Admin", type="password", key="admin_login_password_input")
         if st.button("Entrar", key="admin_login_submit_btn"):
             if senha_input == st.secrets.get("ADMIN_PASSWORD"):

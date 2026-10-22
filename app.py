@@ -329,6 +329,9 @@ else:
         st.markdown("---")
         st.subheader("⚙️ Painel do Administrador")
 
+        # Campo de busca geral por qualquer detalhe
+        termo_busca = st.text_input("🔍 Buscar por qualquer detalhe (Título, Solicitante, Importador, ID, Responsável, Descrição...):", placeholder="Digite para filtrar os chamados instantaneamente...")
+
         try:
             # Busca todos os chamados uma vez (para contadores e filtros)
             response = supabase.table("chamados").select("*").order("created_at", desc=True).execute()
@@ -340,8 +343,8 @@ else:
                     return len(todos_chamados)
                 return sum(1 for x in todos_chamados if x.get("status") == nome_status)
 
-            # Dividindo a tela wide em duas colunas principais: Status (esquerda) e Criticidade (direita)
-            col_status_section, col_crit_section = st.columns([7, 3])
+            # Dividindo a tela wide com espaçamento maior: Status (esquerda) e Criticidade (extrema direita)
+            col_status_section, col_espaco, col_crit_section = st.columns([5, 1, 4])
 
             with col_status_section:
                 st.markdown('<p class="filter-label">Filtrar por Status:</p>', unsafe_allow_html=True)
@@ -376,13 +379,13 @@ else:
             else:
                 chamados_status = [x for x in todos_chamados if x.get("status") == status_filter]
 
-            # --- SUBMENU DE CRITICIDADE (Lado direito) ---
+            # --- SUBMENU DE CRITICIDADE (Canto direito do final da tela) ---
             qtd_total_status = len(chamados_status)
             qtd_critico = sum(1 for x in chamados_status if x.get("criticidade") == "Crítico")
             qtd_urgente = sum(1 for x in chamados_status if x.get("criticidade") == "Urgente")
 
             with col_crit_section:
-                st.markdown('<p class="filter-label">Filtrar por Criticidade:</p>', unsafe_allow_html=True)
+                st.markdown('<p class="filter-label" style="text-align: right;">Filtrar por Criticidade:</p>', unsafe_allow_html=True)
                 col_c_todos, col_c_crit, col_c_urg = st.columns(3)
 
                 with col_c_todos:
@@ -405,10 +408,24 @@ else:
             else:
                 chamados = [x for x in chamados_status if x.get("criticidade") == crit_filter]
 
+            # Aplicação do filtro de busca por qualquer detalhe (se preenchido)
+            if termo_busca.strip():
+                termo = termo_busca.strip().lower()
+                chamadosfiltrados = []
+                for c in chamados:
+                    # Agrupa todos os campos textuais importantes do chamado para checar o termo
+                    texto_completo = f"{c.get('id', '')} {c.get('titulo', '')} {c.get('nome', '')} {c.get('email', '')} {c.get('importador', '')} {c.get('resumo', '')} {c.get('responsavel', '')} {c.get('status', '')} {c.get('criticidade', '')}".lower()
+                    if termo in texto_completo:
+                        chamadosfiltrados.append(c)
+                chamados = chamadosfiltrados
+
             # Ordenação: Crítico -> Urgente -> Sem criticidade (sort estável mantém data desc)
             chamados = sorted(chamados, key=rank_criticidade)
 
             st.markdown("---")
+
+            if not chamados:
+                st.info("Nenhum chamado encontrado com os filtros e termos de busca aplicados.")
 
             for c in chamados:
                 resp_atual_badge = c.get('responsavel', 'Não atribuído')

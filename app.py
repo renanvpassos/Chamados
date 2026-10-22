@@ -474,7 +474,7 @@ else:
             qtd_urgente = sum(1 for x in chamados_status if x.get("criticidade") == "Urgente")
 
             with col_crit_section:
-                st.markdown('<p class="filter-label" style="text-align: center;">Filtrar por Criticidade:</p>', unsafe_allow_html=True)
+                st.markdown('<p class="filter-label" style="text-align: left;">Filtrar por Criticidade:</p>', unsafe_allow_html=True)
                 
                 sub_c1, sub_c2, sub_c3 = st.columns(3)
 

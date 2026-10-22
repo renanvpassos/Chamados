@@ -393,7 +393,7 @@ if st.session_state.admin_logged_in:
     st.sidebar.title("🔧 Menu Admin")
     pagina_selecionada = st.sidebar.radio(
         "Navegação:",
-        ["Painel de Administrador", "Acessar Log de Sistema"]
+        ["Painel de Administrador", "Log do Sistema"]
     )
     
     st.sidebar.markdown("---")

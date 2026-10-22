@@ -440,17 +440,18 @@ if not st.session_state.admin_logged_in:
         titulo = st.text_input("Título do Chamado*", placeholder="Ex: Ajustar tag nota fiscal")
         importador = st.text_input("Importador*", placeholder="Ex: Nome do importador")
         
-        st.markdown("**Resumo do Problema (com suporte a formatação e imagens)*:**")
-        # A variável aqui DEVE chamar-se 'resumo' para evitar o NameError na linha 406
+        st.markdown("**Resumo do Problema*:**")
         resumo = st_quill(
-            placeholder="Descreva o problema, cole prints ou formate o texto aqui...",
+            placeholder="Descreva o problema detalhadamente...",
             key="quill_resumo_chamado"
         )
         
-        imagens = st.file_uploader(
-            "Arquivos complementares (Opcional)", 
-            type=["png", "jpg", "jpeg", "webp", "pdf"], 
-            accept_multiple_files=True
+        # Carregador de imagens específico para ilustrar o problema na descrição
+        imagens_descricao = st.file_uploader(
+            "Adicionar imagens à descrição (Opcional)", 
+            type=["png", "jpg", "jpeg", "webp"], 
+            accept_multiple_files=True,
+            key="imagens_desc_form"
         )
     
         submit_button = st.form_submit_button(label="🚀 Enviar Chamado")
@@ -460,23 +461,26 @@ if not st.session_state.admin_logged_in:
             st.error("Por favor, preencha todos os campos obrigatórios (*).")
         else:
             try:
-                # 1. Processa e salva fisicamente no Storage as imagens coladas no Quill
-                with st.spinner("Processando imagens do texto..."):
-                    resumo_processado = processar_imagens_base64_quill(resumo)
+                # 1. Faz o upload das imagens da descrição para o Supabase Storage
+                urls_imgs_desc = []
+                if imagens_descricao:
+                    with st.spinner("A enviar imagens da descrição..."):
+                        urls_imgs_desc = upload_images(imagens_descricao)
 
-                # 2. Faz o upload dos arquivos adicionais (file_uploader tradicional, se houver)
-                urls_imagens = []
-                if imagens:
-                    with st.spinner("Enviando anexos complementares..."):
-                        urls_imagens = upload_images(imagens)
+                # 2. Constrói o HTML final anexando as imagens no fim do texto do resumo
+                resumo_final = resumo
+                if urls_imgs_desc:
+                    resumo_final += "<br><br><b>Imagens ilustrativas:</b><br>"
+                    for url in urls_imgs_desc:
+                        resumo_final += f'<img src="{url}" style="max-width: 100%; border-radius: 6px; margin-top: 5px; border: 1px solid #ddd;"/><br>'
 
                 dados_chamado = {
                     "nome": nome,
                     "email": email,
                     "titulo": titulo,
                     "importador": importador,
-                    "resumo": resumo_processado, # Salva o HTML com os links limpos do Storage
-                    "imagens": urls_imagens,
+                    "resumo": resumo_final, # Guarda o texto + as imagens já alojadas no Storage
+                    "imagens": [], # Pode manter vazio ou usar para ficheiros gerais
                     "status": "Em Aberto",
                     "responsavel": "Não atribuído",
                     "historico": [],

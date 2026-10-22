@@ -66,7 +66,7 @@ st.markdown(
 
     /* ===== URGENTE / CRÍTICO: FUNDO VERMELHO (sobrescreve a cor do status) ===== */
     [class*="st-key-chamado_"][class*="_urg_"] > div > [data-testid="stExpander"] {
-        background-color: #ffcdd2 !important;
+        background-color: #f7b5ff !important;
         border: 1px solid #e53935 !important;
     }
     [class*="st-key-chamado_"][class*="_crit_"] > div > [data-testid="stExpander"] {

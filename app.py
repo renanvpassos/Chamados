@@ -29,9 +29,15 @@ st.markdown(
         padding-right: 12px !important;
     }
 
-    /* Ajusta o espaçamento correto entre os cards dos chamados para evitar sobreposição ao expandir */
+    /* Espaçamento padrão fechado (aproximado) */
     [data-testid="stExpander"] {
-        margin-bottom: 12px !important;
+        margin-bottom: -50px !important;
+        transition: margin 0.2s ease;
+    }
+
+    /* Quando o expander estiver ABERTO (aria-expanded="true"), remove a margem negativa e dá respiro embaixo */
+    [data-testid="stExpander"] [aria-expanded="true"] {
+        margin-bottom: 15px !important;
     }
 
     /* Cores de fundo dinâmicas para os expanders conforme o status */

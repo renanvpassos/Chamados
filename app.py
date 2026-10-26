@@ -241,8 +241,12 @@ def enviar_email_novo_chamado(dados):
         qtd_anexos = len(dados.get("imagens", []))
         resumo_texto = html_para_texto(dados.get("resumo", ""))
 
+        # Criticidade (None = Normal)
+        criticidade_txt = dados.get("criticidade") or "Normal"
+        prefixo = {"Crítico": "💣 [CRÍTICO] ", "Urgente": "❗ [URGENTE] "}.get(criticidade_txt, "")
+
         msg = EmailMessage()
-        msg["Subject"] = f"🎫 Novo chamado: {titulo_limpo}"
+        msg["Subject"] = f"{prefixo}🎫 Novo chamado: {titulo_limpo}"
         msg["From"] = remetente
         msg["To"] = ", ".join(destinatarios)
         msg["Reply-To"] = str(dados.get("email", "")).replace("\r", "").replace("\n", "")
@@ -252,6 +256,7 @@ def enviar_email_novo_chamado(dados):
             f"Título: {dados.get('titulo')}\n"
             f"Solicitante: {dados.get('nome')} ({dados.get('email')})\n"
             f"Importador: {dados.get('importador')}\n"
+            f"Criticidade: {criticidade_txt}\n"
             f"Responsável: {dados.get('responsavel')}\n"
             f"Anexos: {qtd_anexos}\n\n"
             f"Resumo:\n{resumo_texto}\n"
@@ -262,6 +267,7 @@ def enviar_email_novo_chamado(dados):
             <p><b>Título:</b> {e('titulo')}<br>
             <b>Solicitante:</b> {e('nome')} ({e('email')})<br>
             <b>Importador:</b> {e('importador')}<br>
+            <b>Criticidade:</b> {html.escape(criticidade_txt)}<br>
             <b>Responsável:</b> {e('responsavel')}<br>
             <b>Anexos:</b> {qtd_anexos}</p>
             <p><b>Resumo:</b></p>
@@ -504,6 +510,13 @@ if not st.session_state.admin_logged_in:
         titulo = st.text_input("Título do Chamado*", placeholder="Ex: Ajustar tag nota fiscal")
         importador = st.text_input("Importador*", placeholder="Ex: Nome do importador")
 
+        criticidade_escolhida = st.selectbox(
+            "Criticidade",
+            options=OPCOES_CRITICIDADE,   # ["Normal", "Urgente", "Crítico"]
+            index=0,                      # padrão: Normal
+            help="Use Urgente ou Crítico apenas quando o problema impedir a operação."
+        )
+
         st.markdown("**Resumo do Problema*:**")
         resumo = st_quill(
             placeholder="Descreva o problema detalhadamente... (você pode colar imagens)",
@@ -535,11 +548,15 @@ if not st.session_state.admin_logged_in:
                     with st.spinner("Processando imagens coladas..."):
                         resumo_final = processar_imagens_coladas(resumo)
 
+                # "Normal" é salvo como None (mesmo padrão do painel admin)
+                criticidade_salvar = None if criticidade_escolhida == "Normal" else criticidade_escolhida
+
                 dados_chamado = {
                     "nome": nome,
                     "email": email,
                     "titulo": titulo,
                     "importador": importador,
+                    "criticidade": criticidade_salvar,
                     "resumo": resumo_final,
                     "imagens": anexos_info,
                     "status": "Em Aberto",
@@ -549,7 +566,7 @@ if not st.session_state.admin_logged_in:
                 }
 
                 supabase.table("chamados").insert(dados_chamado).execute()
-                registrar_log("CREATE", f"Novo chamado aberto por {nome} - Título: '{titulo}' | Importador: '{importador}'")
+                registrar_log("CREATE", f"Novo chamado aberto por {nome} - Título: '{titulo}' | Importador: '{importador}' | Criticidade: {criticidade_escolhida}")
 
                 with st.spinner("Notificando a equipe..."):
                     email_ok, email_erro = enviar_email_novo_chamado(dados_chamado)

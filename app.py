@@ -624,7 +624,7 @@ else:
 
             def contar_status(nome_status):
                 if nome_status == "Todos":
-                    return len(todos_chamados)
+                    return sum(1 for x in todos_chamados if x.get("status") != "Finalizado")
                 return sum(1 for x in todos_chamados if x.get("status") == nome_status)
 
             col_status_section, col_espaco, col_crit_section = st.columns([4, 2, 4])
@@ -657,7 +657,8 @@ else:
             status_filter = st.session_state.status_filter
 
             if status_filter == "Todos":
-                chamados_status = list(todos_chamados)
+                # "Todos" mostra tudo, exceto os finalizados
+                chamados_status = [x for x in todos_chamados if x.get("status") != "Finalizado"]
             else:
                 chamados_status = [x for x in todos_chamados if x.get("status") == status_filter]
 
@@ -699,6 +700,8 @@ else:
                         chamadosfiltrados.append(c)
                 chamados = chamadosfiltrados
 
+            # Crítico (0) > Urgente (1) > demais (2); dentro de cada grupo, mais recentes primeiro
+            chamados = sorted(chamados, key=lambda x: x.get("created_at") or "", reverse=True)
             chamados = sorted(chamados, key=rank_criticidade)
 
             st.markdown("---")

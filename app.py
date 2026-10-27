@@ -373,6 +373,51 @@ def calcular_tempo_ultima_atualizacao(chamado):
     except Exception:
         return "N/A"
 
+def calcular_tempo_total_finalizado(chamado):
+    """Tempo total entre a criação do chamado e o momento em que foi finalizado."""
+    if chamado.get("status") != "Finalizado":
+        return None
+
+    def parse_dt(valor):
+        if not valor:
+            return None
+        try:
+            if valor.endswith("Z"):
+                valor = valor.replace("Z", "+00:00")
+            return datetime.fromisoformat(valor)
+        except Exception:
+            return None
+
+    dt_criacao = parse_dt(chamado.get("created_at"))
+    if not dt_criacao:
+        return None
+
+    # Pega a ÚLTIMA atualização que marcou o chamado como Finalizado
+    # (caso ele tenha sido reaberto e finalizado de novo)
+    dt_fim = None
+    historico = chamado.get("historico", [])
+    if isinstance(historico, list):
+        for h in reversed(historico):
+            if h.get("status") == "Finalizado":
+                dt_fim = parse_dt(h.get('data_evento') or h.get('data_registro') or h.get('data'))
+                break
+
+    if not dt_fim:
+        return None
+
+    total_segundos = max(0, int((dt_fim - dt_criacao).total_seconds()))
+    dias = total_segundos // 86400
+    horas = (total_segundos % 86400) // 3600
+    minutos = (total_segundos % 3600) // 60
+
+    partes = []
+    if dias > 0:
+        partes.append(f"{dias}d")
+    if horas > 0 or dias > 0:
+        partes.append(f"{horas}h")
+    partes.append(f"{minutos}m")
+    return " ".join(partes)
+
 # --- STORAGE ---
 def obter_url_publica(file_path):
     public_url_res = supabase.storage.from_(BUCKET_ANEXOS).get_public_url(file_path)
@@ -718,8 +763,11 @@ else:
                 tag_crit = tag_criticidade(criticidade_atual)
 
                 tempo_decorrido = calcular_tempo_ultima_atualizacao(c)
-
+                tempo_total = calcular_tempo_total_finalizado(c)
+                
                 titulo_expander = f"{c['status'].upper()} - {c['titulo']} (Por: {c['nome']} | Resp: {resp_atual_badge})          ⏱️ {tempo_decorrido}"
+                if tempo_total:
+                    titulo_expander += f"   ✅ Total: {tempo_total}"
 
                 with st.container(key=f"chamado_{classe_css}_{tag_crit}_{c['id']}"), \
                      st.expander(titulo_expander):

@@ -767,7 +767,7 @@ else:
                 
                 titulo_expander = f"{c['status'].upper()} - {c['titulo']} (Por: {c['nome']} | Resp: {resp_atual_badge})          ⏱️ {tempo_decorrido}"
                 if tempo_total:
-                    titulo_expander += f"   ✅ Total: {tempo_total}"
+                    titulo_expander += f"   ✅ Total desde a abertura: {tempo_total}"
 
                 with st.container(key=f"chamado_{classe_css}_{tag_crit}_{c['id']}"), \
                      st.expander(titulo_expander):

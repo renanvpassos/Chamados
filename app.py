@@ -21,6 +21,9 @@ if "status_filter" not in st.session_state:
 if "crit_filter" not in st.session_state:
     st.session_state.crit_filter = "Todos"
 
+if "chamado_editando" not in st.session_state:
+    st.session_state.chamado_editando = None
+
 # --- CONFIGURAÇÃO PÁGINA (Dinâmica: wide para admin, centered para usuário) ---
 st.set_page_config(
     page_title="Suporte & Chamados",
@@ -812,6 +815,16 @@ else:
                         st.caption("Nenhuma atualização registrada ainda.")
 
                     with st.expander("✏️ Atualizar Chamado"):
+                        editando_este = st.session_state.chamado_editando == c['id']
+                    
+                        if not editando_este:
+                            if st.button("✏️ Abrir editor de atualização", key=f"abrir_edit_{c['id']}"):
+                                st.session_state.chamado_editando = c['id']
+                                st.rerun()
+                        else:
+                            if st.button("✖️ Fechar editor", key=f"fechar_edit_{c['id']}"):
+                                st.session_state.chamado_editando = None
+                                st.rerun()
                         fuso_br = timezone(timedelta(hours=-3))
                         agora_local = datetime.now(fuso_br)
 

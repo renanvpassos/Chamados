@@ -825,13 +825,9 @@ else:
                             if st.button("✖️ Fechar editor", key=f"fechar_edit_{c['id']}"):
                                 st.session_state.chamado_editando = None
                                 st.rerun()
+                                
                         fuso_br = timezone(timedelta(hours=-3))
                         agora_local = datetime.now(fuso_br)
-
-                        # Versão do editor: ao incrementar, o Quill é recriado vazio após salvar
-                        chave_ver = f"quill_obs_ver_{c['id']}"
-                        if chave_ver not in st.session_state:
-                            st.session_state[chave_ver] = 0
 
                         with st.form(key=f"form_update_{c['id']}"):
                             responsaveis_list = ["Renan", "Brunno"]
@@ -863,10 +859,11 @@ else:
                             )
 
                             st.markdown("**Observação (Máx. 700 caracteres de texto)\\*:**")
+                            # Chave simplificada baseada apenas no ID para evitar falhas de importação dinâmica do componente
                             observacao = st_quill(
                                 placeholder="Descreva o que foi feito ou o motivo da alteração... (você pode colar imagens)",
                                 html=True,
-                                key=f"quill_obs_{c['id']}_{st.session_state[chave_ver]}"
+                                key=f"quill_obs_{c['id']}"
                             )
 
                             col_dt1, col_dt2 = st.columns(2)
@@ -932,8 +929,8 @@ else:
                                         }).eq("id", c['id']).execute()
 
                                         registrar_log("UPDATE", f"Chamado '{c['titulo']}' (Importador: '{importador_val}') atualizado. Resp: {novo_responsavel}, Status: {novo_status}, Criticidade: {nova_criticidade}")
-                                        st.session_state[chave_ver] += 1
-                                        st.session_state.chamado_editando = None   # <-- novo
+                                        
+                                        st.session_state.chamado_editando = None
                                         st.success("Chamado atualizado com sucesso!")
                                         st.rerun()
                                     except Exception as e:

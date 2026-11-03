@@ -933,6 +933,7 @@ else:
 
                                         registrar_log("UPDATE", f"Chamado '{c['titulo']}' (Importador: '{importador_val}') atualizado. Resp: {novo_responsavel}, Status: {novo_status}, Criticidade: {nova_criticidade}")
                                         st.session_state[chave_ver] += 1
+                                        st.session_state.chamado_editando = None   # <-- novo
                                         st.success("Chamado atualizado com sucesso!")
                                         st.rerun()
                                     except Exception as e:

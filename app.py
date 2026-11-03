@@ -811,7 +811,8 @@ else:
                     else:
                         st.caption("Nenhuma atualização registrada ainda.")
 
-                    with st.expander("✏️ Atualizar Chamado"):
+                    abrir_update = st.toggle("✏️ Atualizar Chamado", key=f"toggle_update_{c['id']}")
+                    if abrir_update:
                         fuso_br = timezone(timedelta(hours=-3))
                         agora_local = datetime.now(fuso_br)
 

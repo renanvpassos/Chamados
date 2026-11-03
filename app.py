@@ -35,7 +35,7 @@ st.markdown(
     :root {
         --espaco-fechado: -8px;   /* distância entre chamados FECHADOS (mais negativo = mais colado) */
         --espaco-aberto: 24px;    /* espaço abaixo de um chamado ABERTO (nunca sobrepõe o próximo) */
-        --espaco-fim-expander: 20px; /* respiro no fim do conteúdo de QUALQUER expander (inclusive o de atualização) */
+        --espaco-fim-expander: 20px; /* respiro no fim do conteúdo de QUALQUER expander */
     }
 
     /* Reduz tamanho dos botões de filtro e fontes para caber na tela */
@@ -87,7 +87,7 @@ st.markdown(
         margin-bottom: var(--espaco-aberto) !important;
     }
 
-    /* Respiro no fim de TODO expander aberto (principal e o de "Atualizar ou Excluir") */
+    /* Respiro no fim de TODO expander aberto */
     [data-testid="stExpander"] details[open] > div[data-testid="stExpanderDetails"],
     [data-testid="stExpander"] details[open] > div:last-child {
         padding-bottom: var(--espaco-fim-expander) !important;
@@ -811,7 +811,13 @@ else:
                     else:
                         st.caption("Nenhuma atualização registrada ainda.")
 
-                    abrir_update = st.toggle("✏️ Atualizar Chamado", key=f"toggle_update_{c['id']}")
+                    # TOGGLE em vez de expander: o editor Quill só é criado quando o toggle
+                    # está ativo (iframe já visível), evitando o erro de carregamento do componente.
+                    abrir_update = st.toggle(
+                        "✏️ Atualizar Chamado",
+                        key=f"toggle_update_{c['id']}"
+                    )
+
                     if abrir_update:
                         fuso_br = timezone(timedelta(hours=-3))
                         agora_local = datetime.now(fuso_br)

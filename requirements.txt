@@ -1,3 +1,3 @@
-streamlit
+streamlit==1.40.2
 supabase
-streamlit-quill
+streamlit-quill==0.0.3

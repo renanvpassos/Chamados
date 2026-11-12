@@ -852,7 +852,7 @@ else:
                     imgs = c.get("imagens", [])
                     if imgs:
                         st.write("**Anexos Iniciais:**")
-                        renderizar_anexos(imgs)
+                        renderizar_anexos(imgs, f"ini_{c['id']}")
 
                     st.markdown("---")
 
@@ -873,7 +873,7 @@ else:
                             anexos_hist = h.get("anexos", [])
                             if anexos_hist:
                                 st.caption("Anexos desta atualização:")
-                                renderizar_anexos(anexos_hist)
+                                renderizar_anexos(anexos_hist, f"hist_{c['id']}_{i_h}")
                             st.markdown("---")
                     else:
                         st.caption("Nenhuma atualização registrada ainda.")

@@ -226,7 +226,7 @@ def renderizar_anexos(lista_anexos, prefixo_key="anexo"):
         if dados:
             mime = mimetypes.guess_type(nome)[0] or "application/octet-stream"
             st.download_button(
-                label=f"⬇️ Baixar {nome}",
+                label=f"⬇️ {nome}",
                 data=dados,
                 file_name=nome,
                 mime=mime,

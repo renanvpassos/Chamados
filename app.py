@@ -837,7 +837,7 @@ else:
                     st.write("📜 **Histórico de Atualizações**")
                     historico = c.get("historico", [])
                     if historico:
-                        for h in historico:
+                        for i_h, h in enumerate(historico):
                             data_registro_br = formatar_data_br(h.get('data_registro') or h.get('data'))
                             data_evento_br = formatar_data_br(h.get('data_evento') or h.get('data'))
                             responsavel_update = h.get('responsavel', 'Não informado')

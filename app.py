@@ -11,6 +11,9 @@ import re
 import base64
 import os
 from urllib.parse import quote
+import hashlib
+import mimetypes
+from urllib.parse import unquote
 
 # --- ESTADO DE AUTENTICAÇÃO (Necessário antes do set_page_config) ---
 if "admin_logged_in" not in st.session_state:
@@ -183,13 +186,22 @@ def url_para_download(url, nome):
     sep = "&" if "?" in url else "?"
     return f"{url}{sep}download={quote(nome or 'arquivo')}"
 
-def renderizar_anexos(lista_anexos):
+@st.cache_data(show_spinner=False, ttl=3600, max_entries=200)
+def baixar_bytes_anexo(url):
+    """Busca o arquivo no bucket do Supabase (cacheado para não baixar a cada rerun)."""
+    marcador = f"/{BUCKET_ANEXOS}/"
+    if marcador not in url:
+        return None
+    path = unquote(url.split(marcador, 1)[1].split("?")[0])
+    return supabase.storage.from_(BUCKET_ANEXOS).download(path)
+
+def renderizar_anexos(lista_anexos, prefixo_key="anexo"):
     if not lista_anexos:
         return
 
     EXTENSOES_IMAGEM = {'png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp'}
 
-    for item in lista_anexos:
+    for idx, item in enumerate(lista_anexos):
         if isinstance(item, dict):
             url = item.get("url") or item.get("publicUrl") or item.get("public_url") or item.get("signedURL", "")
             nome = item.get("name", "Arquivo Anexado")
@@ -199,20 +211,30 @@ def renderizar_anexos(lista_anexos):
 
         extensao = nome.split(".")[-1].lower() if "." in nome else ""
 
-        if url and url.startswith("http"):
-            url_dl = html.escape(url_para_download(url, nome), quote=True)
-            nome_html = html.escape(nome)
+        if not (url and url.startswith("http")):
+            continue
 
-            if extensao in EXTENSOES_IMAGEM:
-                st.image(url, caption=f"📎 {nome}", width=300)
+        if extensao in EXTENSOES_IMAGEM:
+            st.image(url, caption=f"📎 {nome}", width=300)
 
-            # Link de download (sem target="_blank": o navegador só baixa, não abre outra guia)
-            st.markdown(
-                f'<div style="margin: 2px 0 10px 0;">'
-                f'<a href="{url_dl}" download="{nome_html}" rel="noopener">⬇️ Baixar {nome_html}</a>'
-                f'</div>',
-                unsafe_allow_html=True
+        chave = hashlib.md5(f"{prefixo_key}_{idx}_{url}".encode()).hexdigest()
+        try:
+            dados = baixar_bytes_anexo(url)
+        except Exception:
+            dados = None
+
+        if dados:
+            mime = mimetypes.guess_type(nome)[0] or "application/octet-stream"
+            st.download_button(
+                label=f"⬇️ Baixar {nome}",
+                data=dados,
+                file_name=nome,
+                mime=mime,
+                key=f"dl_{chave}"
             )
+        else:
+            # Fallback: se não conseguir buscar o arquivo, mantém o link comum
+            st.markdown(f"📄 [{nome}]({url})")
 
 # --- CONEXÃO SUPABASE ---
 def init_supabase() -> Client:

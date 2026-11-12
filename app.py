@@ -554,28 +554,6 @@ def formatar_data_br(data_str):
     except Exception:
         return data_str
 
-def renderizar_anexos(lista_anexos):
-    if not lista_anexos:
-        return
-
-    EXTENSOES_IMAGEM = {'png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp'}
-
-    for item in lista_anexos:
-        if isinstance(item, dict):
-            url = item.get("url") or item.get("publicUrl") or item.get("public_url") or item.get("signedURL", "")
-            nome = item.get("name", "Arquivo Anexado")
-        else:
-            url = str(item)
-            nome = url.split("/")[-1].split("?")[0] if "/" in url else "Arquivo Anexado"
-
-        extensao = nome.split(".")[-1].lower() if "." in nome else ""
-
-        if url and url.startswith("http"):
-            if extensao in EXTENSOES_IMAGEM:
-                st.image(url, caption=f"📎 {nome}", width=300)
-            else:
-                st.markdown(f"📄 [{nome}]({url})", unsafe_allow_html=False)
-
 def renderizar_observacao(observacao, data_evento_br):
     """Renderiza a observação do histórico. Aceita HTML (novas) e texto puro (antigas)."""
     obs = observacao or ""

@@ -10,6 +10,7 @@ from streamlit_quill import st_quill
 import re
 import base64
 import os
+from urllib.parse import quote
 
 # --- ESTADO DE AUTENTICAÇÃO (Necessário antes do set_page_config) ---
 if "admin_logged_in" not in st.session_state:
@@ -171,6 +172,47 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
+def url_para_download(url, nome):
+    """Adiciona ?download=nome na URL pública do Supabase para forçar o download (Content-Disposition: attachment)."""
+    if not url:
+        return url
+    # Evita duplicar se já existir
+    if "download=" in url:
+        return url
+    sep = "&" if "?" in url else "?"
+    return f"{url}{sep}download={quote(nome or 'arquivo')}"
+
+def renderizar_anexos(lista_anexos):
+    if not lista_anexos:
+        return
+
+    EXTENSOES_IMAGEM = {'png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp'}
+
+    for item in lista_anexos:
+        if isinstance(item, dict):
+            url = item.get("url") or item.get("publicUrl") or item.get("public_url") or item.get("signedURL", "")
+            nome = item.get("name", "Arquivo Anexado")
+        else:
+            url = str(item)
+            nome = url.split("/")[-1].split("?")[0] if "/" in url else "Arquivo Anexado"
+
+        extensao = nome.split(".")[-1].lower() if "." in nome else ""
+
+        if url and url.startswith("http"):
+            url_dl = html.escape(url_para_download(url, nome), quote=True)
+            nome_html = html.escape(nome)
+
+            if extensao in EXTENSOES_IMAGEM:
+                st.image(url, caption=f"📎 {nome}", width=300)
+
+            # Link de download (sem target="_blank": o navegador só baixa, não abre outra guia)
+            st.markdown(
+                f'<div style="margin: 2px 0 10px 0;">'
+                f'<a href="{url_dl}" download="{nome_html}" rel="noopener">⬇️ Baixar {nome_html}</a>'
+                f'</div>',
+                unsafe_allow_html=True
+            )
 
 # --- CONEXÃO SUPABASE ---
 def init_supabase() -> Client:

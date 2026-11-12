@@ -844,10 +844,10 @@ else:
                             status_hist_html = badge_status(h.get('status'))
                             crit_hist = h.get('criticidade')
                             crit_hist_txt = f" | **Criticidade:** {badge_criticidade(crit_hist)}" if crit_hist else ""
-
+                    
                             st.markdown(f"🔹 **Registrado em:** {data_registro_br} | **Responsável:** `{responsavel_update}` | **Status:** {status_hist_html}{crit_hist_txt}", unsafe_allow_html=True)
                             renderizar_observacao(h.get('observacao'), data_evento_br)
-
+                    
                             anexos_hist = h.get("anexos", [])
                             if anexos_hist:
                                 st.caption("Anexos desta atualização:")
